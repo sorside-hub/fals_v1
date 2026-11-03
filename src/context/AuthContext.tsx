@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { auth, db, loginWithGoogle, logoutUser } from '../services/firebase';
+import { User } from '@supabase/supabase-js';
+import { getSupabase, loginWithGoogle, logoutUser, getStoredSupabaseConfig } from '../services/supabase';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  isConfigured: boolean;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -13,6 +13,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
+  isConfigured: false,
   signIn: async () => {},
   signOut: async () => {},
 });
@@ -20,30 +21,34 @@ const AuthContext = createContext<AuthContextType>({
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isConfigured, setIsConfigured] = useState(() => getStoredSupabaseConfig().isConfigured);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
+    const config = getStoredSupabaseConfig();
+    setIsConfigured(config.isConfigured);
 
-      if (currentUser) {
-        // Sync user profile document to /users/{uid}
-        try {
-          const userRef = doc(db, 'users', currentUser.uid);
-          await setDoc(userRef, {
-            id: currentUser.uid,
-            email: currentUser.email || '',
-            displayName: currentUser.displayName || 'Musisi',
-            photoURL: currentUser.photoURL || '',
-            updatedAt: Date.now(),
-          }, { merge: true });
-        } catch (err) {
-          console.warn('Failed to sync user profile:', err);
-        }
-      }
+    if (!config.isConfigured) {
+      setLoading(false);
+      return;
+    }
+
+    const client = getSupabase();
+
+    // Check active session
+    client.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
     });
 
-    return () => unsubscribe();
+    // Listen to auth changes
+    const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleSignIn = async () => {
@@ -58,6 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const handleSignOut = async () => {
     try {
       await logoutUser();
+      setUser(null);
     } catch (err) {
       console.error('Sign out error:', err);
       throw err;
@@ -69,6 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         loading,
+        isConfigured,
         signIn: handleSignIn,
         signOut: handleSignOut,
       }}

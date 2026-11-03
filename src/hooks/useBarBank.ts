@@ -1,25 +1,39 @@
 import { useState, useEffect, useRef } from 'react';
 import { BarItem } from '../types';
-import { auth, db } from '../services/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
-import { collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch } from 'firebase/firestore';
-import { handleFirestoreError, OperationType } from '../services/firestoreErrors';
+import { getSupabase, getStoredSupabaseConfig } from '../services/supabase';
 
 const DUMMY_BAR_IDS = new Set(['bar-aporia', 'bar-jendela', 'bar-1', 'bar-3', 'bar-4', 'bar-5']);
 
 const INITIAL_BARS: BarItem[] = [];
 
-function sanitizeBarForFirestore(bar: BarItem, userId: string) {
+function mapBarToRow(bar: BarItem, userId: string) {
   return {
     id: bar.id,
-    userId: userId,
+    user_id: userId,
     text: bar.text || '',
     meaning: bar.meaning || '',
     category: bar.category || 'diksi',
-    rhymeScheme: bar.rhymeScheme || 'Free',
-    syllableCount: Number(bar.syllableCount) || 0,
+    rhyme_scheme: bar.rhymeScheme || 'Free',
+    syllable_count: Number(bar.syllableCount) || 0,
     tags: bar.tags || [],
-    createdAt: bar.createdAt || Date.now(),
+    created_at: bar.createdAt || Date.now(),
+  };
+}
+
+function mapRowToBar(row: any): BarItem {
+  let cat = row.category || 'diksi';
+  if (cat === 'metaphor' || cat === 'idea') cat = 'metafor';
+  if (cat === 'punchline' || cat === 'rhyme') cat = 'bar';
+
+  return {
+    id: row.id,
+    text: row.text || '',
+    meaning: row.meaning || '',
+    category: cat,
+    rhymeScheme: row.rhyme_scheme || 'Free',
+    syllableCount: Number(row.syllable_count) || 0,
+    tags: row.tags || [],
+    createdAt: Number(row.created_at) || Date.now(),
   };
 }
 
@@ -42,7 +56,7 @@ export function useBarBank() {
     }
   });
 
-  const userRef = useRef(auth.currentUser);
+  const currentUserIdRef = useRef<string | null>(null);
 
   // Save to LocalStorage for offline immediate fallback
   useEffect(() => {
@@ -53,65 +67,97 @@ export function useBarBank() {
     }
   }, [barItems]);
 
-  // Sync with Firestore in real-time when authenticated
+  // Sync with Supabase when authenticated
   useEffect(() => {
-    let unsubscribeSnapshot: (() => void) | null = null;
+    const config = getStoredSupabaseConfig();
+    if (!config.isConfigured) return;
 
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-      userRef.current = currentUser;
+    const client = getSupabase();
 
-      if (unsubscribeSnapshot) {
-        unsubscribeSnapshot();
-        unsubscribeSnapshot = null;
-      }
+    const fetchRemoteBars = async (userId: string) => {
+      try {
+        const { data, error } = await client
+          .from('bars')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-      if (!currentUser) return;
+        if (error) {
+          console.warn('Supabase fetch bars notice:', error.message);
+          return;
+        }
 
-      const userBarsCol = collection(db, 'users', currentUser.uid, 'bars');
-
-      unsubscribeSnapshot = onSnapshot(
-        userBarsCol,
-        (snapshot) => {
-          if (!snapshot.empty) {
-            const remoteBars: BarItem[] = [];
-            snapshot.forEach((docSnap) => {
-              const data = docSnap.data() as BarItem;
-              if (!DUMMY_BAR_IDS.has(data.id)) {
-                remoteBars.push(data);
-              }
-            });
-            remoteBars.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-            setBarItems(remoteBars);
-          } else {
-            // First time login: migrate local bars only if non-dummy exist
-            const localSaved = localStorage.getItem('fals_bar_bank');
-            if (localSaved) {
-              const parsed = JSON.parse(localSaved);
-              const nonDummy = parsed.filter((b: BarItem) => !DUMMY_BAR_IDS.has(b.id));
-              if (nonDummy.length > 0) {
-                const batch = writeBatch(db);
-                nonDummy.forEach((b: BarItem) => {
-                  const barDoc = doc(db, 'users', currentUser.uid, 'bars', b.id);
-                  batch.set(barDoc, sanitizeBarForFirestore(b, currentUser.uid));
-                });
-                batch.commit().catch(err => {
-                  console.warn('Initial bar bank cloud migration deferred:', err);
-                });
-              }
+        if (data && data.length > 0) {
+          const remoteBars = data.map(mapRowToBar).filter(b => !DUMMY_BAR_IDS.has(b.id));
+          setBarItems(remoteBars);
+        } else {
+          // If remote empty and local has non-dummy bars, migrate them
+          const localSaved = localStorage.getItem('fals_bar_bank');
+          if (localSaved) {
+            const parsed = JSON.parse(localSaved);
+            const nonDummy = parsed.filter((b: BarItem) => !DUMMY_BAR_IDS.has(b.id));
+            if (nonDummy.length > 0) {
+              const rows = nonDummy.map((b: BarItem) => mapBarToRow(b, userId));
+              await client.from('bars').upsert(rows);
             }
           }
-        },
-        (error) => {
-          handleFirestoreError(error, OperationType.LIST, `users/${currentUser.uid}/bars`, currentUser);
         }
-      );
+      } catch (err) {
+        console.warn('Remote bars sync deferred:', err);
+      }
+    };
+
+    // Check active session
+    client.auth.getSession().then(({ data: { session } }) => {
+      const user = session?.user;
+      currentUserIdRef.current = user?.id || null;
+      if (user) {
+        fetchRemoteBars(user.id);
+      }
+    });
+
+    // Listen to auth changes
+    const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
+      const user = session?.user;
+      currentUserIdRef.current = user?.id || null;
+      if (user) {
+        fetchRemoteBars(user.id);
+      }
     });
 
     return () => {
-      unsubscribeAuth();
-      if (unsubscribeSnapshot) unsubscribeSnapshot();
+      subscription.unsubscribe();
     };
   }, []);
+
+  // Helper to persist single bar item change to Supabase
+  const persistBarToSupabase = async (item: BarItem) => {
+    const userId = currentUserIdRef.current;
+    const config = getStoredSupabaseConfig();
+    if (!userId || !config.isConfigured) return;
+
+    try {
+      const client = getSupabase();
+      const row = mapBarToRow(item, userId);
+      const { error } = await client.from('bars').upsert(row);
+      if (error) console.warn('Supabase bar save error:', error.message);
+    } catch (err) {
+      console.warn('Supabase save bar deferred:', err);
+    }
+  };
+
+  const deleteBarFromSupabase = async (barId: string) => {
+    const userId = currentUserIdRef.current;
+    const config = getStoredSupabaseConfig();
+    if (!userId || !config.isConfigured) return;
+
+    try {
+      const client = getSupabase();
+      const { error } = await client.from('bars').delete().eq('id', barId);
+      if (error) console.warn('Supabase delete bar error:', error.message);
+    } catch (err) {
+      console.warn('Supabase delete bar deferred:', err);
+    }
+  };
 
   const addBar = (newBar: Omit<BarItem, 'id' | 'createdAt'> & { id?: string; createdAt?: number }) => {
     const item: BarItem = {
@@ -121,40 +167,19 @@ export function useBarBank() {
     };
 
     setBarItems(prev => [item, ...prev]);
-
-    const user = userRef.current;
-    if (user) {
-      const barDoc = doc(db, 'users', user.uid, 'bars', item.id);
-      setDoc(barDoc, sanitizeBarForFirestore(item, user.uid)).catch(error => {
-        handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}/bars/${item.id}`, user);
-      });
-    }
+    persistBarToSupabase(item);
 
     return item;
   };
 
   const updateBar = (updatedBar: BarItem) => {
     setBarItems(prev => prev.map(b => b.id === updatedBar.id ? updatedBar : b));
-
-    const user = userRef.current;
-    if (user) {
-      const barDoc = doc(db, 'users', user.uid, 'bars', updatedBar.id);
-      setDoc(barDoc, sanitizeBarForFirestore(updatedBar, user.uid)).catch(error => {
-        handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}/bars/${updatedBar.id}`, user);
-      });
-    }
+    persistBarToSupabase(updatedBar);
   };
 
   const deleteBar = (id: string) => {
     setBarItems(prev => prev.filter(b => b.id !== id));
-
-    const user = userRef.current;
-    if (user) {
-      const barDoc = doc(db, 'users', user.uid, 'bars', id);
-      deleteDoc(barDoc).catch(error => {
-        handleFirestoreError(error, OperationType.DELETE, `users/${user.uid}/bars/${id}`, user);
-      });
-    }
+    deleteBarFromSupabase(id);
   };
 
   return {

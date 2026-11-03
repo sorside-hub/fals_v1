@@ -1,10 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { SongDraft, LyricVersion, AudioMemo, ProjectType, SongStatus } from '../types';
 import { saveAudioBlob, deleteAudioBlob } from '../utils/audioStorage';
-import { auth, db } from '../services/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
-import { collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch } from 'firebase/firestore';
-import { handleFirestoreError, OperationType } from '../services/firestoreErrors';
+import { getSupabase, getStoredSupabaseConfig } from '../services/supabase';
 
 const DUMMY_SONG_IDS = new Set(['song-1', 'song-2', 'project-ep-1', 'track-ep-1', 'track-ep-2', 'track-ep-3']);
 
@@ -85,69 +82,47 @@ export function ensureSongVersions(song: SongDraft): SongDraft {
   };
 }
 
-// Clean object from any undefined values before Firestore persistence
-function sanitizeSongForFirestore(song: SongDraft, userId: string) {
+// Convert SongDraft to Supabase database row format
+function mapSongToRow(song: SongDraft, userId: string) {
   return {
     id: song.id,
-    userId: userId,
+    user_id: userId,
     title: song.title || '',
-    projectType: song.projectType || 'single',
+    project_type: song.projectType || 'single',
     status: song.status || 'draft',
     key: song.key || 'C',
     bpm: Number(song.bpm) || 95,
-    timeSignature: song.timeSignature || '4/4',
+    time_signature: song.timeSignature || '4/4',
     content: song.content || '',
     concept: song.concept || '',
-    activeVersionId: song.activeVersionId || '',
-    versions: (song.versions || []).map(v => ({
-      id: v.id,
-      name: v.name || '',
-      content: v.content || '',
-      key: v.key || 'C',
-      bpm: Number(v.bpm) || 95,
-      isFinal: Boolean(v.isFinal),
-      createdAt: v.createdAt || Date.now(),
-      updatedAt: v.updatedAt || Date.now(),
-    })),
-    tracks: (song.tracks || []).map(t => ({
-      id: t.id,
-      title: t.title || '',
-      projectType: 'single',
-      status: t.status || 'draft',
-      key: t.key || 'C',
-      bpm: Number(t.bpm) || 95,
-      timeSignature: t.timeSignature || '4/4',
-      content: t.content || '',
-      concept: t.concept || '',
-      activeVersionId: t.activeVersionId || '',
-      versions: (t.versions || []).map(v => ({
-        id: v.id,
-        name: v.name || '',
-        content: v.content || '',
-        key: v.key || 'C',
-        bpm: Number(v.bpm) || 95,
-        isFinal: Boolean(v.isFinal),
-        createdAt: v.createdAt || Date.now(),
-        updatedAt: v.updatedAt || Date.now(),
-      })),
-      audioMemos: (t.audioMemos || []).map(m => ({
-        id: m.id,
-        name: m.name || '',
-        duration: Number(m.duration) || 0,
-        createdAt: m.createdAt || Date.now(),
-      })),
-      createdAt: t.createdAt || Date.now(),
-      updatedAt: t.updatedAt || Date.now(),
-    })),
-    audioMemos: (song.audioMemos || []).map(m => ({
-      id: m.id,
-      name: m.name || '',
-      duration: Number(m.duration) || 0,
-      createdAt: m.createdAt || Date.now(),
-    })),
-    createdAt: song.createdAt || Date.now(),
-    updatedAt: song.updatedAt || Date.now(),
+    active_version_id: song.activeVersionId || '',
+    versions: song.versions || [],
+    tracks: song.tracks || [],
+    audio_memos: song.audioMemos || [],
+    created_at: song.createdAt || Date.now(),
+    updated_at: song.updatedAt || Date.now(),
   };
+}
+
+// Convert Supabase database row to SongDraft format
+function mapRowToSong(row: any): SongDraft {
+  return ensureSongVersions({
+    id: row.id,
+    title: row.title,
+    projectType: row.project_type,
+    status: row.status,
+    key: row.key,
+    bpm: row.bpm,
+    timeSignature: row.time_signature,
+    content: row.content,
+    concept: row.concept,
+    activeVersionId: row.active_version_id,
+    versions: row.versions || [],
+    tracks: row.tracks || [],
+    audioMemos: row.audio_memos || [],
+    createdAt: Number(row.created_at) || Date.now(),
+    updatedAt: Number(row.updated_at) || Date.now(),
+  });
 }
 
 export function useSongs() {
@@ -170,7 +145,7 @@ export function useSongs() {
   });
 
   const [activeParentAlbumId, setActiveParentAlbumId] = useState<string | null>(null);
-  const userRef = useRef(auth.currentUser);
+  const currentUserIdRef = useRef<string | null>(null);
 
   // Sync to LocalStorage as instant offline fallback
   useEffect(() => {
@@ -181,87 +156,95 @@ export function useSongs() {
     }
   }, [songs]);
 
-  // Firestore Real-Time Sync when authenticated
+  // Supabase Real-Time & Initial Sync
   useEffect(() => {
-    let unsubscribeSnapshot: (() => void) | null = null;
+    const config = getStoredSupabaseConfig();
+    if (!config.isConfigured) return;
 
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-      userRef.current = currentUser;
+    const client = getSupabase();
 
-      if (unsubscribeSnapshot) {
-        unsubscribeSnapshot();
-        unsubscribeSnapshot = null;
-      }
+    const fetchRemoteSongs = async (userId: string) => {
+      try {
+        const { data, error } = await client
+          .from('songs')
+          .select('*')
+          .order('updated_at', { ascending: false });
 
-      if (!currentUser) return;
+        if (error) {
+          console.warn('Supabase fetch songs notice:', error.message);
+          return;
+        }
 
-      const userSongsCol = collection(db, 'users', currentUser.uid, 'songs');
-
-      unsubscribeSnapshot = onSnapshot(
-        userSongsCol,
-        (snapshot) => {
-          if (!snapshot.empty) {
-            const remoteSongs: SongDraft[] = [];
-            snapshot.forEach((docSnap) => {
-              const data = docSnap.data() as SongDraft;
-              if (!DUMMY_SONG_IDS.has(data.id)) {
-                remoteSongs.push(ensureSongVersions(data));
-              }
-            });
-            remoteSongs.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-            setSongs(remoteSongs);
-          } else {
-            // First time login with empty Firestore: upload local songs if any non-dummy exist
-            const localSaved = localStorage.getItem('fals_songs');
-            if (localSaved) {
-              const itemsToUpload = JSON.parse(localSaved);
-              const nonDummy = itemsToUpload.filter((s: SongDraft) => !DUMMY_SONG_IDS.has(s.id));
-              if (nonDummy.length > 0) {
-                const batch = writeBatch(db);
-                nonDummy.forEach((s: SongDraft) => {
-                  const songDoc = doc(db, 'users', currentUser.uid, 'songs', s.id);
-                  batch.set(songDoc, sanitizeSongForFirestore(ensureSongVersions(s), currentUser.uid));
-                });
-                batch.commit().catch(err => {
-                  console.warn('Initial cloud migration deferred:', err);
-                });
-              }
+        if (data && data.length > 0) {
+          const remoteSongs = data.map(mapRowToSong).filter(s => !DUMMY_SONG_IDS.has(s.id));
+          setSongs(remoteSongs);
+        } else {
+          // Empty remote: if local has non-dummy songs, migrate them to Supabase
+          const localSaved = localStorage.getItem('fals_songs');
+          if (localSaved) {
+            const parsed = JSON.parse(localSaved);
+            const nonDummy = parsed.filter((s: SongDraft) => !DUMMY_SONG_IDS.has(s.id));
+            if (nonDummy.length > 0) {
+              const rows = nonDummy.map((s: SongDraft) => mapSongToRow(ensureSongVersions(s), userId));
+              await client.from('songs').upsert(rows);
             }
           }
-        },
-        (error) => {
-          handleFirestoreError(error, OperationType.LIST, `users/${currentUser.uid}/songs`, currentUser);
         }
-      );
+      } catch (err) {
+        console.warn('Remote song sync deferred:', err);
+      }
+    };
+
+    // Check current session
+    client.auth.getSession().then(({ data: { session } }) => {
+      const user = session?.user;
+      currentUserIdRef.current = user?.id || null;
+      if (user) {
+        fetchRemoteSongs(user.id);
+      }
+    });
+
+    // Listen to auth changes
+    const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
+      const user = session?.user;
+      currentUserIdRef.current = user?.id || null;
+      if (user) {
+        fetchRemoteSongs(user.id);
+      }
     });
 
     return () => {
-      unsubscribeAuth();
-      if (unsubscribeSnapshot) unsubscribeSnapshot();
+      subscription.unsubscribe();
     };
   }, []);
 
-  // Helper to persist single song or track change to Firestore
-  const persistSongToFirestore = async (song: SongDraft) => {
-    const user = userRef.current;
-    if (!user) return;
+  // Helper to persist single song or track change to Supabase
+  const persistSongToSupabase = async (song: SongDraft) => {
+    const userId = currentUserIdRef.current;
+    const config = getStoredSupabaseConfig();
+    if (!userId || !config.isConfigured) return;
+
     try {
-      const path = `users/${user.uid}/songs/${song.id}`;
-      const songDoc = doc(db, 'users', user.uid, 'songs', song.id);
-      await setDoc(songDoc, sanitizeSongForFirestore(song, user.uid));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}/songs/${song.id}`, user);
+      const client = getSupabase();
+      const row = mapSongToRow(song, userId);
+      const { error } = await client.from('songs').upsert(row);
+      if (error) console.warn('Supabase song save error:', error.message);
+    } catch (err) {
+      console.warn('Supabase save song deferred:', err);
     }
   };
 
-  const deleteSongFromFirestore = async (songId: string) => {
-    const user = userRef.current;
-    if (!user) return;
+  const deleteSongFromSupabase = async (songId: string) => {
+    const userId = currentUserIdRef.current;
+    const config = getStoredSupabaseConfig();
+    if (!userId || !config.isConfigured) return;
+
     try {
-      const songDoc = doc(db, 'users', user.uid, 'songs', songId);
-      await deleteDoc(songDoc);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `users/${user.uid}/songs/${songId}`, user);
+      const client = getSupabase();
+      const { error } = await client.from('songs').delete().eq('id', songId);
+      if (error) console.warn('Supabase delete song error:', error.message);
+    } catch (err) {
+      console.warn('Supabase delete song deferred:', err);
     }
   };
 
@@ -294,9 +277,9 @@ export function useSongs() {
     });
 
     if (affectedDirect) {
-      persistSongToFirestore(affectedDirect);
+      persistSongToSupabase(affectedDirect);
     } else if (affectedParent) {
-      persistSongToFirestore(affectedParent);
+      persistSongToSupabase(affectedParent);
     }
 
     return next;
@@ -362,7 +345,7 @@ export function useSongs() {
       setSongs(prev => [newSong, ...prev]);
       setCurrentSongId(newSong.id);
       setActiveParentAlbumId(null);
-      persistSongToFirestore(newSong);
+      persistSongToSupabase(newSong);
       return newSong;
     }
 
@@ -413,7 +396,7 @@ export function useSongs() {
     setSongs(prev => [newProject, ...prev]);
     setCurrentSongId(newProject.id);
     setActiveParentAlbumId(null);
-    persistSongToFirestore(newProject);
+    persistSongToSupabase(newProject);
     return newProject;
   };
 
@@ -422,7 +405,6 @@ export function useSongs() {
   };
 
   const deleteSong = (id: string) => {
-    if (songs.length <= 1) return;
     const target = songs.find(s => s.id === id);
     if (target?.audioMemos) {
       target.audioMemos.forEach(m => deleteAudioBlob(m.id).catch(console.error));
@@ -435,9 +417,9 @@ export function useSongs() {
 
     const remaining = songs.filter(s => s.id !== id);
     setSongs(remaining);
-    deleteSongFromFirestore(id);
+    deleteSongFromSupabase(id);
     if (currentSongId === id) {
-      setCurrentSongId(remaining[0].id);
+      setCurrentSongId(remaining[0]?.id || '');
       setActiveParentAlbumId(null);
     }
   };
@@ -495,7 +477,7 @@ export function useSongs() {
         tracks: [...(proj.tracks || []), newTrack],
         updatedAt: timestamp,
       };
-      persistSongToFirestore(updatedProj);
+      persistSongToSupabase(updatedProj);
       return updatedProj;
     }));
   };
@@ -511,7 +493,7 @@ export function useSongs() {
         tracks: proj.tracks.filter(t => t.id !== trackId),
         updatedAt: Date.now(),
       };
-      persistSongToFirestore(updatedProj);
+      persistSongToSupabase(updatedProj);
       return updatedProj;
     }));
   };
@@ -524,7 +506,7 @@ export function useSongs() {
         concept,
         updatedAt: Date.now(),
       };
-      persistSongToFirestore(updatedProj);
+      persistSongToSupabase(updatedProj);
       return updatedProj;
     }));
   };
@@ -564,8 +546,8 @@ export function useSongs() {
     setCurrentSongId(singleId);
     setActiveParentAlbumId(targetAlbumId);
 
-    deleteSongFromFirestore(singleId);
-    persistSongToFirestore(updatedAlbum);
+    deleteSongFromSupabase(singleId);
+    persistSongToSupabase(updatedAlbum);
 
     return { movedTrack: newTrack, targetAlbum: updatedAlbum };
   };
@@ -609,8 +591,8 @@ export function useSongs() {
     setCurrentSongId(trackId);
     setActiveParentAlbumId(null);
 
-    persistSongToFirestore(newSingle);
-    persistSongToFirestore(updatedAlbum);
+    persistSongToSupabase(newSingle);
+    persistSongToSupabase(updatedAlbum);
 
     return newSingle;
   };
@@ -708,8 +690,9 @@ export function useSongs() {
     }));
   };
 
-  const addAudioMemo = async (songId: string, memo: AudioMemo, blob: Blob) => {
-    await saveAudioBlob(memo.id, blob);
+  // Audio Memo management: 100% instant UI update + background cloud persistence
+  const addAudioMemo = (songId: string, memo: AudioMemo, blob: Blob) => {
+    // 1. Instantly update UI and song document metadata
     setSongs(prev => applyToSongOrTrack(prev, songId, (song) => {
       const updatedMemos = [...(song.audioMemos || []), memo];
       return {
@@ -718,6 +701,11 @@ export function useSongs() {
         updatedAt: Date.now(),
       };
     }));
+
+    // 2. Persist blob to IndexedDB & Supabase Storage in background without blocking UI
+    saveAudioBlob(memo.id, blob).catch(err => {
+      console.warn('Background audio save warning:', err);
+    });
   };
 
   const renameAudioMemo = (songId: string, memoId: string, newName: string) => {
@@ -731,8 +719,8 @@ export function useSongs() {
     }));
   };
 
-  const deleteAudioMemo = async (songId: string, memoId: string) => {
-    await deleteAudioBlob(memoId);
+  const deleteAudioMemo = (songId: string, memoId: string) => {
+    // 1. Instantly update UI and song document metadata
     setSongs(prev => applyToSongOrTrack(prev, songId, (song) => {
       const updatedMemos = (song.audioMemos || []).filter(m => m.id !== memoId);
       return {
@@ -741,6 +729,11 @@ export function useSongs() {
         updatedAt: Date.now(),
       };
     }));
+
+    // 2. Delete blob in background
+    deleteAudioBlob(memoId).catch(err => {
+      console.warn('Background audio delete warning:', err);
+    });
   };
 
   return {

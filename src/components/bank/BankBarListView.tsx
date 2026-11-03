@@ -94,14 +94,20 @@ export const BankBarListView: React.FC<BankBarListViewProps> = ({
           >
             {user ? (
               <>
-                {user.photoURL ? (
-                  <img src={user.photoURL} alt="" className="w-4 h-4 rounded-full object-cover" />
+                {(user.user_metadata?.avatar_url || user.user_metadata?.picture) ? (
+                  <img
+                    src={user.user_metadata?.avatar_url || user.user_metadata?.picture}
+                    alt=""
+                    className="w-4 h-4 rounded-full object-cover"
+                  />
                 ) : (
                   <div className="w-4 h-4 rounded-full bg-[#1C1917] text-[#FAF9F5] flex items-center justify-center text-[9px] font-bold">
-                    {user.displayName?.[0] || 'U'}
+                    {(user.user_metadata?.full_name || user.email)?.[0]?.toUpperCase() || 'U'}
                   </div>
                 )}
-                <span className="hidden sm:inline max-w-[80px] truncate">{user.displayName?.split(' ')[0] || 'Akun'}</span>
+                <span className="hidden sm:inline max-w-[80px] truncate">
+                  {user.user_metadata?.full_name?.split(' ')[0] || user.email?.split('@')[0] || 'Akun'}
+                </span>
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
               </>
             ) : (
@@ -125,6 +131,10 @@ export const BankBarListView: React.FC<BankBarListViewProps> = ({
       <UserSyncModal
         isOpen={showUserSync}
         onClose={() => setShowUserSync(false)}
+        onOpenSettings={() => {
+          setShowUserSync(false);
+          window.location.hash = '#settings';
+        }}
       />
 
       {/* Category Filter Tabs & Search Bar (Centered, matching Lyric tab) */}

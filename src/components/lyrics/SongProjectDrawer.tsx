@@ -142,27 +142,46 @@ export const SongProjectDrawer: React.FC<SongProjectDrawerProps> = ({
     // Determine clean name without extension
     const cleanName = file.name.replace(/\.[^/.]+$/, '').trim() || 'File Audio';
 
-    // Measure duration using Audio element
-    const tempUrl = URL.createObjectURL(file);
-    const tempAudio = new Audio(tempUrl);
-
-    tempAudio.onloadedmetadata = () => {
-      const duration = Math.round(tempAudio.duration) || 0;
-      URL.revokeObjectURL(tempUrl);
+    let dispatched = false;
+    const dispatchAudio = (duration: number) => {
+      if (dispatched) return;
+      dispatched = true;
       if (onAddAudioMemo) {
         onAddAudioMemo(cleanName, duration, file);
       }
     };
 
-    tempAudio.onerror = () => {
-      URL.revokeObjectURL(tempUrl);
-      // Fallback save with default 0 duration
-      if (onAddAudioMemo) {
-        onAddAudioMemo(cleanName, 0, file);
-      }
-    };
+    // Fallback timer: if browser fails to fire loadedmetadata within 800ms, proceed immediately
+    const timer = setTimeout(() => {
+      dispatchAudio(0);
+    }, 800);
 
-    // Reset input
+    try {
+      const tempUrl = URL.createObjectURL(file);
+      const tempAudio = new Audio();
+      tempAudio.preload = 'metadata';
+      tempAudio.src = tempUrl;
+
+      tempAudio.onloadedmetadata = () => {
+        clearTimeout(timer);
+        const duration = Math.round(tempAudio.duration) || 0;
+        URL.revokeObjectURL(tempUrl);
+        dispatchAudio(duration);
+      };
+
+      tempAudio.onerror = () => {
+        clearTimeout(timer);
+        URL.revokeObjectURL(tempUrl);
+        dispatchAudio(0);
+      };
+
+      tempAudio.load();
+    } catch {
+      clearTimeout(timer);
+      dispatchAudio(0);
+    }
+
+    // Reset input so user can pick the same file again if needed
     e.target.value = '';
   };
 

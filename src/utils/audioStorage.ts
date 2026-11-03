@@ -1,10 +1,10 @@
-// IndexedDB + Firebase Storage for audio memo blobs
-import { auth, storage } from '../services/firebase';
-import { ref, uploadBytes, getBlob, deleteObject } from 'firebase/storage';
+// Hybrid Audio Storage: IndexedDB (Local Offline & Zero-Latency) + Supabase Storage (Multi-Device Cloud)
+import { getSupabase, getStoredSupabaseConfig } from '../services/supabase';
 
 const DB_NAME = 'fals_audio_db';
 const DB_VERSION = 1;
 const STORE_NAME = 'audio_memos';
+const BUCKET_NAME = 'audio_memos';
 
 function openAudioDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -31,7 +31,7 @@ function openAudioDB(): Promise<IDBDatabase> {
 const memoryFallback = new Map<string, Blob>();
 
 export async function saveAudioBlob(id: string, blob: Blob): Promise<void> {
-  // 1. Always save to IndexedDB locally for 100% offline access & zero-latency playback
+  // 1. Always save to local IndexedDB for instant playback & 100% offline access
   try {
     const db = await openAudioDB();
     await new Promise<void>((resolve, reject) => {
@@ -46,20 +46,29 @@ export async function saveAudioBlob(id: string, blob: Blob): Promise<void> {
     memoryFallback.set(id, blob);
   }
 
-  // 2. If user is authenticated and online, upload to Firebase Storage
-  const currentUser = auth.currentUser;
-  if (currentUser && typeof navigator !== 'undefined' && navigator.onLine) {
+  // 2. If Supabase is configured and user is authenticated, sync to Supabase Storage in background
+  const config = getStoredSupabaseConfig();
+  if (config.isConfigured && typeof navigator !== 'undefined' && navigator.onLine) {
     try {
-      const storageRef = ref(storage, `audio_memos/${currentUser.uid}/${id}`);
-      await uploadBytes(storageRef, blob);
+      const client = getSupabase();
+      const { data: { user } } = await client.auth.getUser();
+      if (user) {
+        const filePath = `${user.id}/${id}`;
+        client.storage.from(BUCKET_NAME).upload(filePath, blob, {
+          upsert: true,
+          contentType: blob.type || 'audio/webm',
+        }).catch((uploadErr) => {
+          console.warn('Supabase storage background upload deferred:', uploadErr);
+        });
+      }
     } catch (err) {
-      console.warn('Firebase Storage background upload deferred (offline/error):', err);
+      console.warn('Supabase storage check warning:', err);
     }
   }
 }
 
 export async function getAudioBlob(id: string): Promise<Blob | null> {
-  // 1. Try local IndexedDB first
+  // 1. Try local IndexedDB first (fastest, zero network)
   try {
     const db = await openAudioDB();
     const localBlob = await new Promise<Blob | null>((resolve) => {
@@ -86,16 +95,20 @@ export async function getAudioBlob(id: string): Promise<Blob | null> {
     return memoryFallback.get(id) || null;
   }
 
-  // 3. If missing locally, try fetching from Firebase Storage if logged in
-  const currentUser = auth.currentUser;
-  if (currentUser && typeof navigator !== 'undefined' && navigator.onLine) {
+  // 3. If missing locally, try fetching from Supabase Storage for multi-device sync
+  const config = getStoredSupabaseConfig();
+  if (config.isConfigured && typeof navigator !== 'undefined' && navigator.onLine) {
     try {
-      const storageRef = ref(storage, `audio_memos/${currentUser.uid}/${id}`);
-      const cloudBlob = await getBlob(storageRef);
-      // Cache it back to IndexedDB for offline access
-      if (cloudBlob) {
-        saveAudioBlob(id, cloudBlob).catch(console.warn);
-        return cloudBlob;
+      const client = getSupabase();
+      const { data: { user } } = await client.auth.getUser();
+      if (user) {
+        const filePath = `${user.id}/${id}`;
+        const { data, error } = await client.storage.from(BUCKET_NAME).download(filePath);
+        if (data && !error) {
+          // Cache to IndexedDB for offline future access
+          saveAudioBlob(id, data).catch(console.warn);
+          return data;
+        }
       }
     } catch {
       // Audio memo not in cloud or not accessible
@@ -122,14 +135,18 @@ export async function deleteAudioBlob(id: string): Promise<void> {
     console.warn('IndexedDB delete error:', err);
   }
 
-  // 2. Delete from Firebase Storage if logged in
-  const currentUser = auth.currentUser;
-  if (currentUser) {
+  // 2. Delete from Supabase Storage if logged in
+  const config = getStoredSupabaseConfig();
+  if (config.isConfigured) {
     try {
-      const storageRef = ref(storage, `audio_memos/${currentUser.uid}/${id}`);
-      await deleteObject(storageRef);
+      const client = getSupabase();
+      const { data: { user } } = await client.auth.getUser();
+      if (user) {
+        const filePath = `${user.id}/${id}`;
+        client.storage.from(BUCKET_NAME).remove([filePath]).catch(console.warn);
+      }
     } catch {
-      // Ignored if file does not exist on storage
+      // Ignored if file does not exist
     }
   }
 }

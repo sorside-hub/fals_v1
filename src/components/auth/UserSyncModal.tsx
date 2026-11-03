@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Cloud, CloudOff, LogIn, LogOut, CheckCircle2, Shield, User, X } from 'lucide-react';
+import { Cloud, LogIn, LogOut, CheckCircle2, Shield, Settings, X } from 'lucide-react';
 
 interface UserSyncModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenSettings?: () => void;
 }
 
-export const UserSyncModal: React.FC<UserSyncModalProps> = ({ isOpen, onClose }) => {
-  const { user, loading, signIn, signOut } = useAuth();
+export const UserSyncModal: React.FC<UserSyncModalProps> = ({ isOpen, onClose, onOpenSettings }) => {
+  const { user, isConfigured, signIn, signOut } = useAuth();
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -60,22 +61,48 @@ export const UserSyncModal: React.FC<UserSyncModalProps> = ({ isOpen, onClose })
         </div>
 
         {/* Content */}
-        {user ? (
+        {!isConfigured ? (
+          <div className="space-y-4">
+            <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl text-xs space-y-2 text-amber-900">
+              <div className="flex items-center gap-2 font-semibold text-amber-950">
+                <Shield className="w-4 h-4 text-amber-700" />
+                <span>Penyimpanan Lokal Aktif (Offline)</span>
+              </div>
+              <p className="text-[11px] leading-relaxed text-amber-800">
+                Semua draf lirik & rekaman audio tersimpan aman di peramban ini. Untuk menyinkronkan karya lintas perangkat dengan Supabase Cloud, buka halaman pengaturan admin.
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                onClose();
+                if (onOpenSettings) onOpenSettings();
+                else window.location.hash = '#settings';
+              }}
+              className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-[#E5E4DE] hover:bg-[#F5F4EE] text-xs font-semibold text-[#1C1917] transition cursor-pointer"
+            >
+              <Settings className="w-3.5 h-3.5 text-[#78716C]" />
+              <span>Buka Setup Supabase (#settings)</span>
+            </button>
+          </div>
+        ) : user ? (
           <div className="space-y-4">
             <div className="flex items-center gap-3 p-3 bg-[#FAF9F5] border border-[#E5E4DE] rounded-xl">
-              {user.photoURL ? (
+              {user.user_metadata?.avatar_url || user.user_metadata?.picture ? (
                 <img
-                  src={user.photoURL}
-                  alt={user.displayName || 'User'}
+                  src={user.user_metadata.avatar_url || user.user_metadata.picture}
+                  alt={user.user_metadata?.full_name || 'User'}
                   className="w-10 h-10 rounded-full border border-[#E5E4DE] object-cover"
                 />
               ) : (
                 <div className="w-10 h-10 rounded-full bg-[#1C1917] text-[#FAF9F5] flex items-center justify-center font-bold text-sm">
-                  {user.displayName?.[0] || 'U'}
+                  {user.email?.[0]?.toUpperCase() || 'U'}
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-[#1C1917] truncate">{user.displayName || 'Musisi FALS'}</p>
+                <p className="text-sm font-bold text-[#1C1917] truncate">
+                  {user.user_metadata?.full_name || user.user_metadata?.name || 'Musisi FALS'}
+                </p>
                 <p className="text-xs text-[#78716C] truncate">{user.email}</p>
               </div>
             </div>
@@ -83,9 +110,9 @@ export const UserSyncModal: React.FC<UserSyncModalProps> = ({ isOpen, onClose })
             <div className="flex items-start gap-2.5 p-3 bg-emerald-50/70 border border-emerald-200/60 rounded-xl text-emerald-800 text-xs">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold">Cloud Sync Aktif</p>
+                <p className="font-semibold">Cloud Sync Aktif (Supabase)</p>
                 <p className="text-[11px] text-emerald-700 mt-0.5">
-                  Lirik, versi lagu, dan bank amunisi otomatis tersimpan aman di Firebase Firestore.
+                  Lirik, versi lagu, amunisi rima, dan file audio otomatis tersinkronisasi privat antar-perangkat.
                 </p>
               </div>
             </div>
@@ -106,7 +133,7 @@ export const UserSyncModal: React.FC<UserSyncModalProps> = ({ isOpen, onClose })
                 <span>Simpan Lagu Lintas Perangkat</span>
               </div>
               <p className="text-[#78716C] leading-relaxed text-[11px]">
-                Masuk dengan akun Google untuk menyinkronkan lirik dan bank amunisi ide lagumu ke cloud secara otomatis. Tetap berfungsi offline saat tanpa sinyal!
+                Masuk dengan akun Google untuk mencadangkan lirik & rekaman audio lagumu ke database Supabase secara privat dengan enkripsi RLS.
               </p>
             </div>
 

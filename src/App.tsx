@@ -7,6 +7,7 @@ import { ConceptEditor } from './components/lyrics/ConceptEditor';
 import { AlbumProjectView } from './components/lyrics/AlbumProjectView';
 import { BankBar } from './components/BankBar';
 import { OfflineIndicator } from './components/OfflineIndicator';
+import { HiddenSettingsView } from './components/settings/HiddenSettingsView';
 import { useSongs } from './hooks/useSongs';
 import { useBarBank } from './hooks/useBarBank';
 import { useAppNavigation } from './hooks/useAppNavigation';
@@ -217,11 +218,12 @@ export default function App() {
     }
   };
 
+  const isSettingsOpen = route.subView === 'settings';
   const isLyricEditorOpen = route.tab === 'lyrics' && route.subView === 'editor';
   const isLyricConceptOpen = route.tab === 'lyrics' && route.subView === 'concept';
   const isAlbumOpen = route.tab === 'lyrics' && route.subView === 'album';
   const isBarEditorOpen = route.tab === 'bank' && route.subView === 'editor';
-  const isFullScreenEditor = isLyricEditorOpen || isLyricConceptOpen || isBarEditorOpen;
+  const isFullScreenEditor = isLyricEditorOpen || isLyricConceptOpen || isBarEditorOpen || isSettingsOpen;
 
   // Active album project if in album subView
   const currentAlbumProject = isAlbumOpen ? songs.find(s => s.id === route.id) : null;
@@ -237,17 +239,24 @@ export default function App() {
       {/* Main Responsive Content Workspace */}
       <main
         className={`flex-1 w-full mx-auto pb-14 md:pb-16 ${
-          isLyricEditorOpen || isLyricConceptOpen || isAlbumOpen
+          isSettingsOpen
+            ? 'max-w-4xl px-3 sm:px-6 md:px-8 pt-3 sm:pt-6'
+            : isLyricEditorOpen || isLyricConceptOpen || isAlbumOpen
             ? 'max-w-6xl px-0 sm:px-6 md:px-8 pt-1 sm:pt-3'
             : isBarEditorOpen
             ? 'max-w-6xl px-3 sm:px-6 md:px-8 pt-2 sm:pt-3'
             : 'max-w-7xl px-3 sm:px-6 md:px-8 pt-3 sm:pt-6'
         }`}
       >
-        {/* Tab Lirik: Multi-View (List View ➔ Album View ➔ Full Bleed Canvas Editor / Concept Editor) */}
-        {route.tab === 'lyrics' && (
-          <div className="animate-fade-in w-full">
-            {isLyricConceptOpen ? (
+        {/* Hidden Settings & Supabase SQL Setup View */}
+        {isSettingsOpen ? (
+          <HiddenSettingsView onBack={() => navigate('#lyrics')} />
+        ) : (
+          <>
+            {/* Tab Lirik: Multi-View (List View ➔ Album View ➔ Full Bleed Canvas Editor / Concept Editor) */}
+            {route.tab === 'lyrics' && (
+              <div className="animate-fade-in w-full">
+                {isLyricConceptOpen ? (
               <ConceptEditor
                 currentSong={currentSong}
                 onUpdateSong={updateSong}
@@ -344,6 +353,8 @@ export default function App() {
               }}
             />
           </div>
+        )}
+          </>
         )}
       </main>
 

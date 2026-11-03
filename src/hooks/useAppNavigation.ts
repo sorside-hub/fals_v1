@@ -4,18 +4,31 @@ import { TabType } from '../types';
 export interface ParsedRoute {
   rawHash: string;
   tab: TabType;
-  subView?: 'editor' | 'deep' | 'concept' | 'album' | null;
+  subView?: 'editor' | 'deep' | 'concept' | 'album' | 'settings' | null;
   id?: string | null;
 }
 
 export function parseHash(hashStr: string): ParsedRoute {
-  const clean = hashStr.replace(/^#\/?/, '').trim();
+  let clean = hashStr.replace(/^#\/?/, '').trim();
+  if (!clean && typeof window !== 'undefined' && window.location.pathname.replace(/^\//, '').startsWith('settings')) {
+    clean = 'settings';
+  }
+
   if (!clean) {
     return { rawHash: '#lyrics', tab: 'lyrics', subView: null, id: null };
   }
 
   const parts = clean.split('/');
   const rawTab = parts[0]?.toLowerCase();
+
+  if (rawTab === 'settings') {
+    return {
+      rawHash: '#settings',
+      tab: 'lyrics',
+      subView: 'settings',
+      id: null,
+    };
+  }
 
   let tab: TabType = 'lyrics';
   if (rawTab === 'bank' || rawTab === 'amunisi') {
@@ -24,8 +37,8 @@ export function parseHash(hashStr: string): ParsedRoute {
     tab = 'lyrics';
   }
 
-  const subView = (parts[1] === 'editor' || parts[1] === 'deep' || parts[1] === 'concept' || parts[1] === 'album')
-    ? (parts[1] as 'editor' | 'deep' | 'concept' | 'album')
+  const subView = (parts[1] === 'editor' || parts[1] === 'deep' || parts[1] === 'concept' || parts[1] === 'album' || parts[1] === 'settings')
+    ? (parts[1] as 'editor' | 'deep' | 'concept' | 'album' | 'settings')
     : null;
   const id = parts[2] ? decodeURIComponent(parts[2]) : null;
 
@@ -69,9 +82,9 @@ export function useAppNavigation() {
 
   // Listen for hashchange and popstate (native gesture back, browser buttons)
   useEffect(() => {
-    // If no initial hash, set default #learn without polluting extra history
+    // If no initial hash, set default #lyrics without polluting extra history
     if (!window.location.hash) {
-      window.history.replaceState({ tab: 'learn' }, '', '#learn');
+      window.history.replaceState({ tab: 'lyrics' }, '', '#lyrics');
     }
 
     const handlePopState = (e: PopStateEvent) => {
