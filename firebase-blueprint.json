@@ -1,0 +1,165 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile document",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique user ID matching auth.uid"
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name"
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "User avatar photo URL"
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["id", "email"]
+    },
+    "Song": {
+      "title": "Song",
+      "description": "Song draft or EP/Album project",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique song or project identifier"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner user ID"
+        },
+        "title": {
+          "type": "string",
+          "description": "Song or project title"
+        },
+        "projectType": {
+          "type": "string",
+          "description": "Type of music project",
+          "enum": ["single", "ep", "album"]
+        },
+        "status": {
+          "type": "string",
+          "description": "Draft or release state",
+          "enum": ["draft", "progress", "release", "final", "proses"]
+        },
+        "key": {
+          "type": "string",
+          "description": "Musical key signature"
+        },
+        "bpm": {
+          "type": "number",
+          "description": "Beats per minute tempo"
+        },
+        "timeSignature": {
+          "type": "string",
+          "description": "Time signature (e.g. 4/4)"
+        },
+        "content": {
+          "type": "string",
+          "description": "TipTap HTML lyric content with chord annotations"
+        },
+        "concept": {
+          "type": "string",
+          "description": "Song concept, premise, or narrative background"
+        },
+        "activeVersionId": {
+          "type": "string",
+          "description": "Currently active lyric version ID"
+        },
+        "versions": {
+          "type": "array",
+          "description": "History of lyric revisions and chord snapshots"
+        },
+        "tracks": {
+          "type": "array",
+          "description": "List of tracks for EP or Album projects"
+        },
+        "audioMemos": {
+          "type": "array",
+          "description": "Metadata for vocal memo recordings"
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Creation timestamp in epoch ms"
+        },
+        "updatedAt": {
+          "type": "number",
+          "description": "Last update timestamp in epoch ms"
+        }
+      },
+      "required": ["id", "userId", "title", "projectType", "status"]
+    },
+    "BarItem": {
+      "title": "BarItem",
+      "description": "Bar bank rhyme or lyric ammunition idea",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique bar ammunition item ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner user ID"
+        },
+        "text": {
+          "type": "string",
+          "description": "Lyric bar, diction, metaphor or punchline text"
+        },
+        "meaning": {
+          "type": "string",
+          "description": "Philosophical meaning or contextual emotion"
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the bar item",
+          "enum": ["diksi", "metafor", "bar", "hook", "punchline", "rhyme", "idea"]
+        },
+        "rhymeScheme": {
+          "type": "string",
+          "description": "Rhyme scheme pattern (e.g. AABB, ABAB, Free)"
+        },
+        "syllableCount": {
+          "type": "number",
+          "description": "Total syllable count"
+        },
+        "tags": {
+          "type": "array",
+          "description": "Categorization tags"
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Creation timestamp in epoch ms"
+        }
+      },
+      "required": ["id", "userId", "text", "category"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile document"
+    },
+    "/users/{userId}/songs/{songId}": {
+      "schema": "Song",
+      "description": "User songs, tracks, EPs, and albums"
+    },
+    "/users/{userId}/bars/{barId}": {
+      "schema": "BarItem",
+      "description": "User bar bank items and rhyme ammunition"
+    }
+  }
+}

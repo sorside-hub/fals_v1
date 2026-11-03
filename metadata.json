@@ -1,0 +1,6 @@
+{
+  "name": "FALS",
+  "description": "Studio penulisan lirik lagu profesional dengan penghitung suku kata, smart chord toolbar, perekam memo vokal, dan bank amunisi rima & ide lagu.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

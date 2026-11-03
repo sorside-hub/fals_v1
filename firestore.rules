@@ -1,0 +1,66 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Common security primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // User profile document
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create, update: if isOwner(userId) && incoming().id == userId;
+      allow delete: if isOwner(userId);
+
+      // Songs & Projects subcollection
+      match /songs/{songId} {
+        allow get, list: if isOwner(userId);
+        allow delete: if isOwner(userId);
+        allow create: if isOwner(userId) 
+          && isValidId(songId)
+          && incoming().userId == userId
+          && incoming().title is string && incoming().title.size() <= 200;
+        allow update: if isOwner(userId)
+          && isValidId(songId)
+          && incoming().userId == existing().userId
+          && incoming().title is string && incoming().title.size() <= 200;
+      }
+
+      // Bar Bank (Amunisi Rima & Diksi) subcollection
+      match /bars/{barId} {
+        allow get, list: if isOwner(userId);
+        allow delete: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidId(barId)
+          && incoming().userId == userId
+          && incoming().text is string && incoming().text.size() <= 5000;
+        allow update: if isOwner(userId)
+          && isValidId(barId)
+          && incoming().userId == existing().userId
+          && incoming().text is string && incoming().text.size() <= 5000;
+      }
+    }
+  }
+}

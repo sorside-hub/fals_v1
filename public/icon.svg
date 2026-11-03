@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="112" fill="#FAF9F5"/>
+  <rect x="24" y="24" width="464" height="464" rx="96" fill="none" stroke="#E5E4DE" stroke-width="2"/>
+  
+  <!-- Subtle tuning fork / note / bar lines mark -->
+  <g transform="translate(256, 256)" stroke="#1C1917" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Center stem -->
+    <line x1="0" y1="40" x2="0" y2="130" stroke-width="16"/>
+    <!-- U-prong of tuning fork & sound waves -->
+    <path d="M -50 -70 L -50 0 C -50 50, 50 50, 50 0 L 50 -70" fill="none" stroke-width="16"/>
+    <!-- Musical bar line accents -->
+    <line x1="-110" y1="-70" x2="-80" y2="-70" stroke-width="8" stroke="#78716C"/>
+    <line x1="-120" y1="-20" x2="-80" y2="-20" stroke-width="8" stroke="#78716C"/>
+    <line x1="-110" y1="30" x2="-80" y2="30" stroke-width="8" stroke="#78716C"/>
+    
+    <line x1="80" y1="-70" x2="110" y2="-70" stroke-width="8" stroke="#78716C"/>
+    <line x1="80" y1="-20" x2="120" y2="-20" stroke-width="8" stroke="#78716C"/>
+    <line x1="80" y1="30" x2="110" y2="30" stroke-width="8" stroke="#78716C"/>
+    
+    <!-- Resonance dot / Note head -->
+    <circle cx="0" cy="145" r="14" fill="#1C1917" stroke="none"/>
+  </g>
+  <text x="256" y="440" font-family="system-ui, -apple-system, sans-serif" font-size="34" font-weight="700" letter-spacing="8" fill="#1C1917" text-anchor="middle">FALS</text>
+</svg>
