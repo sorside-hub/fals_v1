@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
+import { DOMParser as PMDOMParser } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
 import { countSyllablesInLine } from '../utils/syllableCounter';
 import { CHROMATIC_NOTES } from '../utils/musicTheory';
@@ -183,22 +184,38 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
       attributes: {
         class: 'tiptap-editor focus:outline-hidden min-h-[400px] text-[14px] sm:text-[15.5px] text-[#1C1917] leading-[1.55rem] font-normal px-1 sm:px-2',
       },
-      transformPastedText(text) {
-        if (/\[(verse|chorus|bridge|pre-chorus|post-chorus|hook|outro|intro|interlude|solo|refrain|tag)/i.test(text)) {
-          return convertPastedSectionsToHtml(text);
-        }
-        return text;
-      },
-      transformPastedHTML(html) {
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = html;
-        const text = tempDiv.innerText || tempDiv.textContent || '';
-        if (/\[(verse|chorus|bridge|pre-chorus|post-chorus|hook|outro|intro|interlude|solo|refrain|tag)/i.test(text)) {
-          return convertPastedSectionsToHtml(text);
-        }
-        return html;
-      },
       handleDOMEvents: {
+        paste: (view, event) => {
+          const clipboardData = event.clipboardData;
+          if (!clipboardData) return false;
+
+          const textData = clipboardData.getData('text/plain');
+          const htmlData = clipboardData.getData('text/html');
+
+          const rawInput = textData || (htmlData ? extractCleanLyricsText(htmlData) : '');
+          if (!rawInput) return false;
+
+          const cleanText = extractCleanLyricsText(rawInput);
+          if (!cleanText) return false;
+
+          // Check if pasted content contains section tags or multiline lyric text
+          if (
+            /\[(verse|chorus|bridge|pre-chorus|post-chorus|hook|outro|intro|interlude|solo|refrain|tag)/i.test(cleanText) ||
+            cleanText.includes('\n')
+          ) {
+            event.preventDefault();
+            const formattedHtml = convertPastedSectionsToHtml(cleanText);
+
+            const parser = PMDOMParser.fromSchema(view.state.schema);
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = formattedHtml;
+            const slice = parser.parseSlice(tempDiv);
+            const tr = view.state.tr.replaceSelection(slice);
+            view.dispatch(tr);
+            return true;
+          }
+          return false;
+        },
         copy: (view) => {
           const selection = view.state.selection;
           if (selection.empty) return false;
