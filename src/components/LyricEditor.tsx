@@ -19,6 +19,8 @@ import {
   ArrowLeft,
   ChevronDown,
   Menu,
+  Copy,
+  Check,
 } from 'lucide-react';
 
 interface LyricEditorProps {
@@ -51,6 +53,65 @@ function formatChordsForEditor(rawContent: string): string {
   return rawContent.replace(/\[([A-G][b#]?(?:m|maj|min|dim|aug|sus[24]|add9|[0-9])*)\]/g, (_match, chord) => {
     return `<span data-chord="${chord}">[${chord}]</span>`;
   });
+}
+
+// Extract clean single-newline plain text/markdown from HTML
+export function extractCleanLyricsText(htmlContent: string): string {
+  if (!htmlContent) return '';
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = htmlContent;
+
+  const lines: string[] = [];
+  const children = Array.from(tempDiv.children) as HTMLElement[];
+
+  if (children.length === 0) {
+    const raw = (tempDiv.innerText || tempDiv.textContent || '').trim();
+    return raw.split(/\r?\n/).map(l => l.trim()).filter((l, i, arr) => !(l === '' && arr[i - 1] === '')).join('\n');
+  }
+
+  for (const child of children) {
+    const lineText = (child.innerText || child.textContent || '').trim();
+    lines.push(lineText);
+  }
+
+  return lines.join('\n');
+}
+
+// Auto-detect section bracket tags in pasted plain text or HTML and format into H3 headings
+function convertPastedSectionsToHtml(rawText: string): string {
+  const lines = rawText.split(/\r?\n/);
+  const result: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const sectionMatch = trimmed.match(/^\[(verse|chorus|bridge|pre-chorus|post-chorus|hook|outro|intro|interlude|solo|refrain|tag)(?:\s*(\d+))?\]$/i);
+    if (sectionMatch) {
+      const typeMap: Record<string, string> = {
+        verse: 'Verse',
+        chorus: 'Chorus',
+        'pre-chorus': 'Pre-Chorus',
+        'post-chorus': 'Post-Chorus',
+        bridge: 'Bridge',
+        hook: 'Hook',
+        intro: 'Intro',
+        outro: 'Outro',
+        interlude: 'Interlude',
+        solo: 'Solo',
+        refrain: 'Refrain',
+        tag: 'Tag',
+      };
+      const rawType = sectionMatch[1].toLowerCase();
+      const num = sectionMatch[2] ? ` ${sectionMatch[2]}` : '';
+      const formattedType = typeMap[rawType] || (rawType.charAt(0).toUpperCase() + rawType.slice(1));
+      result.push(`<h3>[${formattedType}${num}]</h3>`);
+    } else if (trimmed) {
+      result.push(`<p>${formatChordsForEditor(trimmed)}</p>`);
+    } else {
+      result.push('<p></p>');
+    }
+  }
+
+  return result.join('');
 }
 
 export const LyricEditor: React.FC<LyricEditorProps> = ({
@@ -92,6 +153,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
   const [isProjectDrawerOpen, setIsProjectDrawerOpen] = useState(false);
   const [isChordDrawerOpen, setIsChordDrawerOpen] = useState(false);
   const [isWordBankOpen, setIsWordBankOpen] = useState(false);
+  const [isCopiedLyrics, setIsCopiedLyrics] = useState(false);
 
   // Gesture state refs to distinguish tap from touch scroll/drag
   const pointerStateRef = useRef<{
@@ -103,7 +165,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
 
   const lastDragTimeRef = useRef<number>(0);
 
-  // Initialize TipTap Editor with ChordBadge Extension
+  // Initialize TipTap Editor with ChordBadge Extension & Paste Section Auto-Detector
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -121,7 +183,37 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
       attributes: {
         class: 'tiptap-editor focus:outline-hidden min-h-[400px] text-[14px] sm:text-[15.5px] text-[#1C1917] leading-[1.55rem] font-normal px-1 sm:px-2',
       },
+      transformPastedText(text) {
+        if (/\[(verse|chorus|bridge|pre-chorus|post-chorus|hook|outro|intro|interlude|solo|refrain|tag)/i.test(text)) {
+          return convertPastedSectionsToHtml(text);
+        }
+        return text;
+      },
+      transformPastedHTML(html) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        const text = tempDiv.innerText || tempDiv.textContent || '';
+        if (/\[(verse|chorus|bridge|pre-chorus|post-chorus|hook|outro|intro|interlude|solo|refrain|tag)/i.test(text)) {
+          return convertPastedSectionsToHtml(text);
+        }
+        return html;
+      },
       handleDOMEvents: {
+        copy: (view) => {
+          const selection = view.state.selection;
+          if (selection.empty) return false;
+
+          const slice = selection.content();
+          const div = document.createElement('div');
+          div.appendChild(view.serializer.serializeFragment(slice.content));
+
+          const cleanText = extractCleanLyricsText(div.innerHTML);
+          if (cleanText) {
+            navigator.clipboard.writeText(cleanText).catch(console.warn);
+            return true;
+          }
+          return false;
+        },
         pointerdown: (_view, event) => {
           const target = event.target as HTMLElement | null;
           const badge = target?.closest('.chord-badge, [data-chord]') as HTMLElement | null;
@@ -441,10 +533,47 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
 
   const activeGutterItems = gutterItems.length > 0 ? gutterItems : fallbackItems;
 
-  // Insert section heading into TipTap
+  // Copy Clean Plain Text / Markdown Lyrics
+  const handleCopyLyrics = () => {
+    if (!editor) return;
+    const cleanText = extractCleanLyricsText(editor.getHTML());
+    if (cleanText) {
+      navigator.clipboard.writeText(cleanText);
+      setIsCopiedLyrics(true);
+      setTimeout(() => setIsCopiedLyrics(false), 2000);
+    }
+  };
+
+  // Insert section heading into TipTap & focus cursor directly on paragraph below without extra blank lines
   const handleInsertSection = (sectionName: string) => {
     if (!editor) return;
-    editor.chain().focus().insertContent(`<h3>[${sectionName}]</h3><p></p>`).run();
+
+    const { selection } = editor.state;
+    const currentLineText = editor.state.doc.textBetween(
+      selection.$anchor.start(),
+      selection.$anchor.end()
+    ).trim();
+
+    if (!currentLineText) {
+      editor
+        .chain()
+        .focus()
+        .setNode('heading', { level: 3 })
+        .insertContent(`[${sectionName}]`)
+        .splitBlock()
+        .setNode('paragraph')
+        .run();
+    } else {
+      editor
+        .chain()
+        .focus()
+        .splitBlock()
+        .setNode('heading', { level: 3 })
+        .insertContent(`[${sectionName}]`)
+        .splitBlock()
+        .setNode('paragraph')
+        .run();
+    }
   };
 
   // Insert chord symbol as interactive ChordBadgeNode at cursor
@@ -532,7 +661,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
           </div>
         </div>
 
-        {/* Right: Key, BPM & Status */}
+        {/* Right: Key, BPM, Status & Salin Lirik Button */}
         <div className="flex items-center gap-1.5 shrink-0">
           {/* Key selector trigger */}
           <button
@@ -583,6 +712,26 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
             />
           </div>
 
+          {/* Salin Lirik Clean Button Desktop */}
+          <button
+            type="button"
+            onClick={handleCopyLyrics}
+            className="h-8 flex items-center gap-1 px-2.5 bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg text-xs font-mono transition cursor-pointer shadow-2xs group shrink-0"
+            title="Salin Lirik Rapi (Format Clean Plain Text/Markdown)"
+          >
+            {isCopiedLyrics ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="font-bold text-emerald-700 whitespace-nowrap">Tersalin!</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-3.5 h-3.5 text-[#57534E] group-hover:text-[#1C1917]" />
+                <span className="font-bold text-[#1C1917] whitespace-nowrap">Salin Lirik</span>
+              </>
+            )}
+          </button>
+
           {/* Right Sidebar Drawer Trigger (Menu Icon Garis 3) */}
           <button
             type="button"
@@ -597,7 +746,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
 
       {/* MOBILE HEADER (2 Rows: Row 1 = Controls, Row 2 = Full Title) */}
       <div className="md:hidden sticky top-0 z-20 bg-[#FAF9F5]/95 backdrop-blur-md border-b border-[#E5E4DE] pt-1.5 pb-2 px-3">
-        {/* Row 1: Key, BPM & Status */}
+        {/* Row 1: Key, BPM, Status & Salin Lirik */}
         <div className="flex items-center justify-between gap-1.5 pb-1">
           <div className="flex items-center gap-1 min-w-0">
             {/* Key selector trigger */}
@@ -648,6 +797,20 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
                 triggerRef={mobileStatusBtnRef}
               />
             </div>
+
+            {/* Salin Lirik Clean Button Mobile */}
+            <button
+              type="button"
+              onClick={handleCopyLyrics}
+              className="h-7.5 flex items-center gap-1 px-2 bg-[#FFFFFF] active:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg text-[10px] font-mono cursor-pointer shadow-2xs shrink-0"
+              title="Salin Lirik Rapi"
+            >
+              {isCopiedLyrics ? (
+                <Check className="w-3 h-3 text-emerald-600" />
+              ) : (
+                <Copy className="w-3 h-3 text-[#57534E]" />
+              )}
+            </button>
           </div>
 
           {/* Right Sidebar Drawer Trigger Mobile (Menu Icon Garis 3) */}

@@ -20,6 +20,8 @@ export function getSectionOptions(text: string = ''): SectionOption[] {
     { key: 'verse', name: 'Verse', numbered: true },
     { key: 'pre-chorus', name: 'Pre-Chorus', numbered: false },
     { key: 'chorus', name: 'Chorus', numbered: true },
+    { key: 'interlude', name: 'Interlude', numbered: false },
+    { key: 'solo', name: 'Solo', numbered: false },
     { key: 'bridge', name: 'Bridge', numbered: false },
     { key: 'hook', name: 'Hook', numbered: false },
     { key: 'intro', name: 'Intro', numbered: false },
@@ -312,7 +314,7 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
               title="Buka Drawer Harmoni & Family Chord"
             >
               <Plus className="w-3.5 h-3.5 text-[#57534E]" />
-              <span>Akor ({activeKey})</span>
+              <span>Akor</span>
             </button>
           )}
 
@@ -342,9 +344,9 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
       style={{
         bottom: `${effectiveOffset}px`,
       }}
-      className="fixed inset-x-0 bottom-0 z-50 bg-[#FAF9F5]/98 backdrop-blur-md border-t border-b border-[#E5E4DE] shadow-xl px-2.5 py-1.5 flex items-center justify-between gap-2 animate-fade-in"
+      className="fixed inset-x-0 bottom-0 z-50 bg-[#FAF9F5]/98 backdrop-blur-md border-t border-b border-[#E5E4DE] shadow-xl px-2.5 py-1.5 flex items-center justify-between gap-1.5 animate-fade-in"
     >
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5 min-w-0">
         {/* Pojok Kiri: Undo & Redo for Mobile */}
         <div className="flex items-center gap-1 shrink-0">
           <button
@@ -356,7 +358,7 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
             }}
             className={`w-7 h-7 flex items-center justify-center rounded-md border border-[#D6D3D1] bg-[#FFFFFF] transition shadow-2xs select-none ${
               canUndo
-                ? 'text-[#1C1917] active:bg-[#EAE8DF] cursor-pointer'
+                ? 'text-[#1C1917]'
                 : 'text-[#A8A29E] opacity-35 cursor-not-allowed'
             }`}
             title="Urungkan (Undo)"
@@ -373,7 +375,7 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
             }}
             className={`w-7 h-7 flex items-center justify-center rounded-md border border-[#D6D3D1] bg-[#FFFFFF] transition shadow-2xs select-none ${
               canRedo
-                ? 'text-[#1C1917] active:bg-[#EAE8DF] cursor-pointer'
+                ? 'text-[#1C1917]'
                 : 'text-[#A8A29E] opacity-35 cursor-not-allowed'
             }`}
             title="Ulangi (Redo)"
@@ -384,7 +386,7 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
 
         <span className="w-px h-4 bg-[#E5E4DE] mx-0.5 shrink-0" />
 
-        {/* Pinned Single Section Dropdown Button (Outside scroll container to avoid clipping and keep keyboard open) */}
+        {/* Pinned Single Section Dropdown Button */}
         <div ref={mobileSectionRef} className="relative shrink-0">
           <button
             type="button"
@@ -462,7 +464,7 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
             title="Buka Drawer Akor"
           >
             <Plus className="w-3.5 h-3.5 text-[#57534E]" />
-            <span>Akor ({activeKey})</span>
+            <span>Akor</span>
           </button>
         )}
 
