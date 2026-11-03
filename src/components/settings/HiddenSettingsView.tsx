@@ -376,7 +376,7 @@ export const HiddenSettingsView: React.FC<HiddenSettingsViewProps> = ({ onBack }
           <div className="space-y-0.5">
             <h3 className="text-sm font-bold text-[#1C1917]">Skrip SQL Lengkap (DDL, RLS & Storage)</h3>
             <p className="text-xs text-[#78716C]">
-              Jalankan skrip ini sekali saja di menu **SQL Editor** pada project Supabase-mu.
+              Jalankan skrip ini sekali saja di menu <strong className="text-[#1C1917] font-semibold">SQL Editor</strong> pada project Supabase-mu.
             </p>
           </div>
           <button
@@ -406,28 +406,37 @@ export const HiddenSettingsView: React.FC<HiddenSettingsViewProps> = ({ onBack }
           <div className="p-3.5 bg-[#FAF9F5] border border-[#E5E4DE] rounded-xl space-y-1.5">
             <span className="font-mono font-bold text-[#1C1917]">1. Buat Project Baru</span>
             <p className="leading-relaxed">
-              Buka <a href="https://supabase.com" target="_blank" rel="noreferrer" className="text-emerald-700 underline font-semibold">supabase.com</a>, daftar akun gratis, lalu klik **New project**. Beri nama (misal: "FALS") dan tentukan password database.
+              Buka{' '}
+              <a
+                href="https://supabase.com"
+                target="_blank"
+                rel="noreferrer"
+                className="text-emerald-700 underline font-semibold hover:text-emerald-800"
+              >
+                supabase.com
+              </a>
+              , daftar akun gratis, lalu klik <strong className="text-[#1C1917] font-semibold">New project</strong>. Beri nama (misal: "FALS") dan buat password database.
             </p>
           </div>
 
           <div className="p-3.5 bg-[#FAF9F5] border border-[#E5E4DE] rounded-xl space-y-1.5">
             <span className="font-mono font-bold text-[#1C1917]">2. Eksekusi Skrip SQL</span>
             <p className="leading-relaxed">
-              Klik menu **SQL Editor** di panel kiri Supabase $\rightarrow$ klik **New query** $\rightarrow$ tempel (*paste*) skrip SQL di atas $\rightarrow$ klik **Run**.
+              Klik menu <strong className="text-[#1C1917] font-semibold">SQL Editor</strong> di panel kiri Supabase → klik <strong className="text-[#1C1917] font-semibold">New query</strong> → tempelkan skrip SQL di atas → klik tombol <strong className="text-[#1C1917] font-semibold">Run</strong>.
             </p>
           </div>
 
           <div className="p-3.5 bg-[#FAF9F5] border border-[#E5E4DE] rounded-xl space-y-1.5">
             <span className="font-mono font-bold text-[#1C1917]">3. Aktifkan Google Sign-in</span>
             <p className="leading-relaxed">
-              Buka menu **Authentication** $\rightarrow$ **Providers** $\rightarrow$ pilih **Google** dan aktifkan (*toggle on*). Masukkan Client ID & Client Secret dari Google Cloud.
+              Buka menu <strong className="text-[#1C1917] font-semibold">Authentication</strong> → <strong className="text-[#1C1917] font-semibold">Providers</strong> → <strong className="text-[#1C1917] font-semibold">Google</strong> (aktifkan). Masukkan <em className="text-[#1C1917] not-italic font-medium">Client ID</em> &amp; <em className="text-[#1C1917] not-italic font-medium">Client Secret</em> dari Google Cloud Console.
             </p>
           </div>
 
           <div className="p-3.5 bg-[#FAF9F5] border border-[#E5E4DE] rounded-xl space-y-1.5">
             <span className="font-mono font-bold text-[#1C1917]">4. Salin Kunci ke Cloudflare</span>
             <p className="leading-relaxed">
-              Buka **Project Settings** $\rightarrow$ **API**. Salin **Project URL** dan **anon key** ke Environment Variables di Cloudflare Pages (<code className="text-[#1C1917]">VITE_SUPABASE_URL</code> & <code className="text-[#1C1917]">VITE_SUPABASE_ANON_KEY</code>).
+              Buka <strong className="text-[#1C1917] font-semibold">Project Settings</strong> → <strong className="text-[#1C1917] font-semibold">API</strong>. Salin <strong className="text-[#1C1917] font-semibold">Project URL</strong> dan <strong className="text-[#1C1917] font-semibold">anon public key</strong> ke Environment Variables Cloudflare Pages (<code className="px-1 py-0.5 rounded bg-[#F5F4EE] border border-[#E5E4DE] font-mono text-[10px] text-[#1C1917]">VITE_SUPABASE_URL</code> &amp; <code className="px-1 py-0.5 rounded bg-[#F5F4EE] border border-[#E5E4DE] font-mono text-[10px] text-[#1C1917]">VITE_SUPABASE_ANON_KEY</code>).
             </p>
           </div>
         </div>
