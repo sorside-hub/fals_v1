@@ -79,8 +79,28 @@ export async function loginWithGoogle() {
   return data;
 }
 
+import { clearAudioDB } from '../utils/audioStorage';
+
 export async function logoutUser() {
   const client = getSupabase();
+
+  // Clear all local storage & cache
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('fals_songs');
+    localStorage.removeItem('fals_bar_bank');
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('fals_migrated_') || key.startsWith('fals_bars_migrated_')) {
+        localStorage.removeItem(key);
+      }
+    });
+    clearAudioDB().catch(console.warn);
+  }
+
   const { error } = await client.auth.signOut();
   if (error) throw error;
+
+  if (typeof window !== 'undefined') {
+    window.location.hash = '#lyrics';
+    window.location.reload();
+  }
 }

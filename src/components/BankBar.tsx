@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { BarItem, BarCategory } from '../types';
+import React, { useMemo } from 'react';
+import { BarItem } from '../types';
 import { BankBarListView } from './bank/BankBarListView';
 import { BarEditorView } from './bank/BarEditorView';
 
 interface BankBarProps {
   barItems: BarItem[];
-  onAddBar: (bar: Omit<BarItem, 'id' | 'createdAt'> & { id?: string; createdAt?: number }) => BarItem | void;
+  onAddBar: (bar: Omit<BarItem, 'id' | 'createdAt'> & { id?: string; createdAt?: number }) => BarItem;
   onUpdateBar?: (bar: BarItem) => void;
   onDeleteBar: (id: string) => void;
   onSendToLyric?: (text: string) => void;
@@ -26,118 +26,60 @@ export const BankBar: React.FC<BankBarProps> = ({
   onNavigateToEditor,
   onBackFromEditor,
 }) => {
-  const [editingBar, setEditingBar] = useState<BarItem | null>(null);
-  const [isCreatingNew, setIsCreatingNew] = useState(false);
-
-  // Sync editing bar if activeBarId changes via URL hash or popstate
-  useEffect(() => {
-    if (isEditorActive) {
-      if (activeBarId === 'new') {
-        const blankBar: BarItem = {
-          id: `bar-${Date.now()}`,
-          text: '',
-          meaning: '',
-          category: 'diksi',
-          rhymeScheme: 'Free',
-          syllableCount: 0,
-          tags: [],
-          createdAt: Date.now(),
-        };
-        setEditingBar(blankBar);
-        setIsCreatingNew(true);
-      } else if (activeBarId) {
-        const found = barItems.find(b => b.id === activeBarId);
-        if (found) {
-          setEditingBar(found);
-          setIsCreatingNew(false);
-        }
-      }
-    } else {
-      setEditingBar(null);
-      setIsCreatingNew(false);
-    }
+  const activeBar = useMemo(() => {
+    if (!isEditorActive || !activeBarId) return null;
+    return barItems.find(b => b.id === activeBarId) || null;
   }, [isEditorActive, activeBarId, barItems]);
 
   const handleSelectBar = (bar: BarItem) => {
     if (onNavigateToEditor) {
       onNavigateToEditor(bar.id);
-    } else {
-      setEditingBar(bar);
-      setIsCreatingNew(false);
     }
   };
 
   const handleCreateNewBar = () => {
-    if (onNavigateToEditor) {
-      onNavigateToEditor('new');
-    } else {
-      const blankBar: BarItem = {
-        id: `bar-${Date.now()}`,
-        text: '',
-        meaning: '',
-        category: 'diksi',
-        rhymeScheme: 'Free',
-        syllableCount: 0,
-        tags: [],
-        createdAt: Date.now(),
-      };
-      setEditingBar(blankBar);
-      setIsCreatingNew(true);
+    const created = onAddBar({
+      text: '',
+      meaning: '',
+      category: 'diksi',
+      rhymeScheme: 'Free',
+      syllableCount: 0,
+      tags: [],
+      createdAt: Date.now(),
+    });
+    if (created && onNavigateToEditor) {
+      onNavigateToEditor(created.id);
     }
   };
 
   const handleSaveBar = (savedBar: BarItem) => {
-    if (isCreatingNew) {
-      if (!savedBar.text.trim() && !savedBar.meaning?.trim()) {
-        return;
-      }
-      onAddBar({
-        id: savedBar.id,
-        text: savedBar.text,
-        meaning: savedBar.meaning,
-        category: savedBar.category,
-        rhymeScheme: savedBar.rhymeScheme,
-        syllableCount: savedBar.syllableCount,
-        tags: savedBar.tags,
-        createdAt: savedBar.createdAt || Date.now(),
-      });
-      setIsCreatingNew(false);
-      setEditingBar(savedBar);
-      if (onNavigateToEditor) {
-        onNavigateToEditor(savedBar.id);
-      }
-    } else {
-      if (onUpdateBar) {
-        onUpdateBar(savedBar);
-      }
+    if (onUpdateBar) {
+      onUpdateBar(savedBar);
     }
   };
 
   const handleBack = () => {
+    if (activeBar && !activeBar.text.trim() && !activeBar.meaning?.trim()) {
+      onDeleteBar(activeBar.id);
+    }
     if (onBackFromEditor) {
       onBackFromEditor();
-    } else {
-      setEditingBar(null);
-      setIsCreatingNew(false);
     }
   };
 
-  // If a bar is being edited, show full-page BarEditorView
-  if (editingBar || isEditorActive) {
-    const barToRender = editingBar || barItems.find(b => b.id === activeBarId) || barItems[0];
-    if (barToRender) {
-      return (
-        <BarEditorView
-          bar={barToRender}
-          onSaveBar={handleSaveBar}
-          onBack={handleBack}
-          onSendToLyric={onSendToLyric}
-        />
-      );
-    }
+  // If editor route is active and we have an activeBar, render BarEditorView
+  if (isEditorActive && activeBar) {
+    return (
+      <BarEditorView
+        bar={activeBar}
+        onSaveBar={handleSaveBar}
+        onBack={handleBack}
+        onSendToLyric={onSendToLyric}
+      />
+    );
   }
 
-  // Otherwise, show the gallery of bars
+  // Otherwise, show the gallery list of bars
   return (
     <div className="max-w-5xl mx-auto">
       <BankBarListView

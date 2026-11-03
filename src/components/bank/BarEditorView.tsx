@@ -78,6 +78,7 @@ export const BarEditorView: React.FC<BarEditorViewProps> = ({
 
   const triggerSave = () => {
     const d = latestDataRef.current;
+    if (!d.text.trim() && !d.meaning?.trim()) return;
     const updated: BarItem = {
       ...bar,
       text: d.text,

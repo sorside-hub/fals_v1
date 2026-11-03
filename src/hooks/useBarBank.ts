@@ -77,7 +77,8 @@ export function useBarBank() {
 
     const fetchRemoteBars = async (userId: string) => {
       try {
-        const { data, error } = await client
+        // 1. Fetch remote bars from Supabase
+        const { data: remoteData, error } = await client
           .from('bars')
           .select('*')
           .order('created_at', { ascending: false });
@@ -87,29 +88,48 @@ export function useBarBank() {
           return;
         }
 
-        const migrationKey = `fals_bars_migrated_${userId}`;
-        const hasMigrated = localStorage.getItem(migrationKey) === 'true';
+        const remoteBars = (remoteData || [])
+          .map(mapRowToBar)
+          .filter(b => !DUMMY_BAR_IDS.has(b.id));
 
-        if (data && data.length > 0) {
-          const remoteBars = data.map(mapRowToBar).filter(b => !DUMMY_BAR_IDS.has(b.id));
-          setBarItems(remoteBars);
-          localStorage.setItem(migrationKey, 'true');
-        } else {
-          if (hasMigrated) {
-            setBarItems([]);
-          } else {
-            const localSaved = localStorage.getItem('fals_bar_bank');
-            if (localSaved) {
-              const parsed = JSON.parse(localSaved);
-              const nonDummy = parsed.filter((b: BarItem) => !DUMMY_BAR_IDS.has(b.id));
-              if (nonDummy.length > 0) {
-                const rows = nonDummy.map((b: BarItem) => mapBarToRow(b, userId));
-                await client.from('bars').upsert(rows);
-              }
-            }
-            localStorage.setItem(migrationKey, 'true');
+        // 2. Read local offline bars stored in localStorage before login
+        const localSaved = localStorage.getItem('fals_bar_bank');
+        let localBars: BarItem[] = [];
+        if (localSaved) {
+          try {
+            const parsed = JSON.parse(localSaved);
+            localBars = parsed
+              .filter((b: BarItem) => !DUMMY_BAR_IDS.has(b.id))
+              .map((item: any) => {
+                let cat = item.category || 'diksi';
+                if (cat === 'metaphor' || cat === 'idea') cat = 'metafor';
+                if (cat === 'punchline' || cat === 'rhyme') cat = 'bar';
+                return { ...item, category: cat };
+              });
+          } catch {
+            localBars = [];
           }
         }
+
+        // 3. Find any local bar that is NOT in remote
+        const remoteMap = new Map(remoteBars.map(b => [b.id, b]));
+        const unpushedLocalBars = localBars.filter(local => !remoteMap.has(local.id));
+
+        // 4. If there are offline bars written before login, push them to Supabase now!
+        if (unpushedLocalBars.length > 0) {
+          const rowsToPush = unpushedLocalBars.map(b => mapBarToRow(b, userId));
+          await client.from('bars').upsert(rowsToPush);
+
+          unpushedLocalBars.forEach(b => remoteMap.set(b.id, b));
+        }
+
+        // 5. Combine and update final bars list sorted by createdAt descending
+        const mergedBars = Array.from(remoteMap.values()).sort(
+          (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
+        );
+
+        setBarItems(mergedBars);
+        localStorage.setItem(`fals_bars_migrated_${userId}`, 'true');
       } catch (err) {
         console.warn('Remote bars sync deferred:', err);
       }
@@ -205,14 +225,20 @@ export function useBarBank() {
     }
   };
 
-  const addBar = (newBar: Omit<BarItem, 'id' | 'createdAt'> & { id?: string; createdAt?: number }) => {
+  const addBar = (newBar: Omit<BarItem, 'id' | 'createdAt'> & { id?: string; createdAt?: number }): BarItem => {
     const item: BarItem = {
       ...newBar,
-      id: newBar.id || `bar-${Date.now()}`,
+      id: newBar.id || `bar-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       createdAt: newBar.createdAt || Date.now(),
     };
 
-    setBarItems(prev => [item, ...prev]);
+    setBarItems(prev => {
+      const exists = prev.some(b => b.id === item.id);
+      if (exists) {
+        return prev.map(b => b.id === item.id ? item : b);
+      }
+      return [item, ...prev];
+    });
     persistBarToSupabase(item);
 
     return item;

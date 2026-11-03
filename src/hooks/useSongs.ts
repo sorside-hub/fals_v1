@@ -166,7 +166,8 @@ export function useSongs() {
 
     const fetchRemoteSongs = async (userId: string) => {
       try {
-        const { data, error } = await client
+        // 1. Fetch remote songs from Supabase
+        const { data: remoteData, error } = await client
           .from('songs')
           .select('*')
           .order('updated_at', { ascending: false });
@@ -176,32 +177,48 @@ export function useSongs() {
           return;
         }
 
-        const migrationKey = `fals_migrated_${userId}`;
-        const hasMigrated = localStorage.getItem(migrationKey) === 'true';
+        const remoteSongs = (remoteData || [])
+          .map(mapRowToSong)
+          .filter(s => !DUMMY_SONG_IDS.has(s.id));
 
-        if (data && data.length > 0) {
-          const remoteSongs = data.map(mapRowToSong).filter(s => !DUMMY_SONG_IDS.has(s.id));
-          setSongs(remoteSongs);
-          localStorage.setItem(migrationKey, 'true');
-        } else {
-          // Remote is empty (0 songs in Supabase)
-          if (hasMigrated) {
-            // User already synced before and intentionally deleted all songs (or has 0 songs in cloud)
-            setSongs([]);
-          } else {
-            // First time ever logging in with this user: migrate local draft songs to Supabase once
-            const localSaved = localStorage.getItem('fals_songs');
-            if (localSaved) {
-              const parsed = JSON.parse(localSaved);
-              const nonDummy = parsed.filter((s: SongDraft) => !DUMMY_SONG_IDS.has(s.id));
-              if (nonDummy.length > 0) {
-                const rows = nonDummy.map((s: SongDraft) => mapSongToRow(ensureSongVersions(s), userId));
-                await client.from('songs').upsert(rows);
-              }
-            }
-            localStorage.setItem(migrationKey, 'true');
+        // 2. Read local offline songs stored in localStorage before login
+        const localSaved = localStorage.getItem('fals_songs');
+        let localSongs: SongDraft[] = [];
+        if (localSaved) {
+          try {
+            const parsed = JSON.parse(localSaved);
+            localSongs = parsed
+              .filter((s: SongDraft) => !DUMMY_SONG_IDS.has(s.id))
+              .map(ensureSongVersions);
+          } catch {
+            localSongs = [];
           }
         }
+
+        // 3. Find any local song that is NOT in remote or has a newer updatedAt
+        const remoteMap = new Map(remoteSongs.map(s => [s.id, s]));
+        const unpushedLocalSongs = localSongs.filter(local => {
+          const remote = remoteMap.get(local.id);
+          if (!remote) return true; // Brand new offline draft created before login!
+          return (local.updatedAt || 0) > (remote.updatedAt || 0); // Local edit is newer!
+        });
+
+        // 4. If there are offline songs written before login, push them to Supabase now!
+        if (unpushedLocalSongs.length > 0) {
+          const rowsToPush = unpushedLocalSongs.map(s => mapSongToRow(s, userId));
+          await client.from('songs').upsert(rowsToPush);
+
+          // Merge local unpushed into remote Map
+          unpushedLocalSongs.forEach(s => remoteMap.set(s.id, s));
+        }
+
+        // 5. Combine and update final songs list sorted by updatedAt descending
+        const mergedSongs = Array.from(remoteMap.values()).sort(
+          (a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)
+        );
+
+        setSongs(mergedSongs);
+        localStorage.setItem(`fals_migrated_${userId}`, 'true');
       } catch (err) {
         console.warn('Remote song sync deferred:', err);
       }

@@ -160,3 +160,19 @@ export async function deleteAudioBlob(id: string): Promise<void> {
     }
   }
 }
+
+export async function clearAudioDB(): Promise<void> {
+  memoryFallback.clear();
+  try {
+    const db = await openAudioDB();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.clear();
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch (err) {
+    console.warn('IndexedDB clear error:', err);
+  }
+}
