@@ -5,68 +5,9 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from '../services/firestoreErrors';
 
-const INITIAL_BARS: BarItem[] = [
-  {
-    id: 'bar-aporia',
-    text: 'Aporia',
-    meaning: 'Keadaan kebuntuan filosofis atau kebingungan saat sebuah premis mencapai paradoks tanpa jalan keluar.',
-    category: 'diksi',
-    rhymeScheme: 'Free',
-    syllableCount: 4,
-    tags: ['diksi', 'filsafat', 'paradoks'],
-    createdAt: Date.now() - 3600000,
-  },
-  {
-    id: 'bar-jendela',
-    text: 'Jendela berembun menatap sepi',
-    meaning: 'Menggambarkan keterasingan dan sunyi mendalam dari balik dinding kaca melihat dunia luar yang samar.',
-    category: 'metafor',
-    rhymeScheme: 'Free',
-    syllableCount: 11,
-    tags: ['metafor', 'kesepian', 'suasana'],
-    createdAt: Date.now() - 7200000,
-  },
-  {
-    id: 'bar-1',
-    text: 'Tersesat di fret yang sama, mencari kunci tanpa nama / Menghitung detik yang tersisa, di antara doa dan rasa.',
-    meaning: 'Pergulatan musisi mencari inspirasi nada di tengah keterbatasan waktu dan harapan.',
-    category: 'bar',
-    rhymeScheme: 'AABB',
-    syllableCount: 24,
-    tags: ['bar', 'fret', 'doa'],
-    createdAt: Date.now() - 14400000,
-  },
-  {
-    id: 'bar-3',
-    text: 'Biar nada ini bicara, saat kata kehilangan arah.',
-    meaning: 'Pernyataan pasrah ketika logika dan kata-kata tak mampu menampung luapan emosi.',
-    category: 'hook',
-    rhymeScheme: 'AA',
-    syllableCount: 16,
-    tags: ['hook', 'chorus'],
-    createdAt: Date.now() - 28800000,
-  },
-  {
-    id: 'bar-4',
-    text: 'Minor ketujuh di senar berkarat, seperti rindu yang kian memberat.',
-    meaning: 'Analogi akor minor dan senar tua dengan penyesalan yang tidak pernah tersampaikan.',
-    category: 'metafor',
-    rhymeScheme: 'AA',
-    syllableCount: 18,
-    tags: ['metafor', 'akor', 'rindu'],
-    createdAt: Date.now() - 43200000,
-  },
-  {
-    id: 'bar-5',
-    text: 'Bukan nada yang fals, tapi telinga dunia yang terlalu bising untuk mendengar ketulusan.',
-    meaning: 'Kritik sosial tentang kejujuran berekspresi di tengah tren yang seragam.',
-    category: 'bar',
-    rhymeScheme: 'Free',
-    syllableCount: 26,
-    tags: ['punchline', 'filosofi', 'fals'],
-    createdAt: Date.now() - 86400000,
-  }
-];
+const DUMMY_BAR_IDS = new Set(['bar-aporia', 'bar-jendela', 'bar-1', 'bar-3', 'bar-4', 'bar-5']);
+
+const INITIAL_BARS: BarItem[] = [];
 
 function sanitizeBarForFirestore(bar: BarItem, userId: string) {
   return {
@@ -86,16 +27,18 @@ export function useBarBank() {
   const [barItems, setBarItems] = useState<BarItem[]>(() => {
     try {
       const saved = localStorage.getItem('fals_bar_bank');
-      if (!saved) return INITIAL_BARS;
+      if (!saved) return [];
       const parsed = JSON.parse(saved);
-      return parsed.map((item: any) => {
-        let cat = item.category || 'diksi';
-        if (cat === 'metaphor' || cat === 'idea') cat = 'metafor';
-        if (cat === 'punchline' || cat === 'rhyme') cat = 'bar';
-        return { ...item, category: cat };
-      });
+      return parsed
+        .filter((item: any) => !DUMMY_BAR_IDS.has(item.id))
+        .map((item: any) => {
+          let cat = item.category || 'diksi';
+          if (cat === 'metaphor' || cat === 'idea') cat = 'metafor';
+          if (cat === 'punchline' || cat === 'rhyme') cat = 'bar';
+          return { ...item, category: cat };
+        });
     } catch {
-      return INITIAL_BARS;
+      return [];
     }
   });
 
@@ -132,22 +75,30 @@ export function useBarBank() {
           if (!snapshot.empty) {
             const remoteBars: BarItem[] = [];
             snapshot.forEach((docSnap) => {
-              remoteBars.push(docSnap.data() as BarItem);
+              const data = docSnap.data() as BarItem;
+              if (!DUMMY_BAR_IDS.has(data.id)) {
+                remoteBars.push(data);
+              }
             });
             remoteBars.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
             setBarItems(remoteBars);
           } else {
-            // First time login: migrate local bars to Firestore
+            // First time login: migrate local bars only if non-dummy exist
             const localSaved = localStorage.getItem('fals_bar_bank');
-            const itemsToUpload = localSaved ? JSON.parse(localSaved) : INITIAL_BARS;
-            const batch = writeBatch(db);
-            itemsToUpload.forEach((b: BarItem) => {
-              const barDoc = doc(db, 'users', currentUser.uid, 'bars', b.id);
-              batch.set(barDoc, sanitizeBarForFirestore(b, currentUser.uid));
-            });
-            batch.commit().catch(err => {
-              console.warn('Initial bar bank cloud migration deferred:', err);
-            });
+            if (localSaved) {
+              const parsed = JSON.parse(localSaved);
+              const nonDummy = parsed.filter((b: BarItem) => !DUMMY_BAR_IDS.has(b.id));
+              if (nonDummy.length > 0) {
+                const batch = writeBatch(db);
+                nonDummy.forEach((b: BarItem) => {
+                  const barDoc = doc(db, 'users', currentUser.uid, 'bars', b.id);
+                  batch.set(barDoc, sanitizeBarForFirestore(b, currentUser.uid));
+                });
+                batch.commit().catch(err => {
+                  console.warn('Initial bar bank cloud migration deferred:', err);
+                });
+              }
+            }
           }
         },
         (error) => {

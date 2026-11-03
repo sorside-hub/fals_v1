@@ -6,165 +6,33 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from '../services/firestoreErrors';
 
-const INITIAL_SONGS: SongDraft[] = [
-  {
-    id: 'song-1',
-    title: 'Harmoni yang Tertinggal',
-    projectType: 'single',
-    key: 'C',
-    bpm: 96,
-    timeSignature: '4/4',
-    status: 'proses',
-    updatedAt: Date.now() - 3600000,
-    content: `<h3>[Verse 1]</h3>
-<p>Di sudut kamar yang beralas dingin [C]</p>
-<p>Kucoba petik senar gitar yang hening [Am]</p>
-<p>Ada melodi yang belum terpikirkan [F]</p>
-<p>Tertahan ragu di ujung pengharapan [G]</p>
-<p></p>
-<h3>[Chorus]</h3>
-<p>FALS mengalun di dada yang sunyi [Cmaj7]</p>
-<p>Mencari akor yang mengerti arti [Am7]</p>
-<p>Jika nada ini tak lagi seirama [Fadd9]</p>
-<p>Biar lagu ini tetap bercerita [G7]</p>`,
-    versions: [
-      {
-        id: 'v-1',
-        name: 'Versi 1',
-        content: `<h3>[Verse 1]</h3>
-<p>Di sudut kamar yang beralas dingin [C]</p>
-<p>Kucoba petik senar gitar yang hening [Am]</p>
-<p>Ada melodi yang belum terpikirkan [F]</p>
-<p>Tertahan ragu di ujung pengharapan [G]</p>
-<p></p>
-<h3>[Chorus]</h3>
-<p>FALS mengalun di dada yang sunyi [Cmaj7]</p>
-<p>Mencari akor yang mengerti arti [Am7]</p>
-<p>Jika nada ini tak lagi seirama [Fadd9]</p>
-<p>Biar lagu ini tetap bercerita [G7]</p>`,
-        key: 'C',
-        bpm: 96,
-        isFinal: true,
-        createdAt: Date.now() - 3600000,
-      }
-    ],
-    activeVersionId: 'v-1',
-  },
-  {
-    id: 'song-2',
-    title: 'Sketsa Sore di Kota',
-    projectType: 'single',
-    key: 'G',
-    bpm: 110,
-    timeSignature: '4/4',
-    status: 'draft',
-    updatedAt: Date.now() - 86400000,
-    content: `<h3>[Verse 1]</h3>
-<p>Lampu jalan mulai menyala perlahan [G]</p>
-<p>Menyapa langkah kaki yang kelelahan [Em]</p>
-<p>Segelas kopi di warung pojokan [C]</p>
-<p>Menemani selembar kertas coretan [D]</p>`,
-    versions: [
-      {
-        id: 'v-2',
-        name: 'Versi 1',
-        content: `<h3>[Verse 1]</h3>
-<p>Lampu jalan mulai menyala perlahan [G]</p>
-<p>Menyapa langkah kaki yang kelelahan [Em]</p>
-<p>Segelas kopi di warung pojokan [C]</p>
-<p>Menemani selembar kertas coretan [D]</p>`,
-        key: 'G',
-        bpm: 110,
-        isFinal: true,
-        createdAt: Date.now() - 86400000,
-      }
-    ],
-    activeVersionId: 'v-2',
-  },
-  {
-    id: 'project-ep-1',
-    title: 'Epilog Kota Dingin',
-    projectType: 'ep',
-    concept: 'Sebuah narasi 3 bagian tentang kerinduan, penyesalan, dan penerimaan di tengah hiruk-pikuk kota malam.',
-    key: 'D',
-    bpm: 88,
-    timeSignature: '4/4',
-    status: 'progress',
-    updatedAt: Date.now() - 7200000,
-    content: '',
-    tracks: [
-      {
-        id: 'track-ep-1',
-        title: '01. Lampu Mercusuar',
-        projectType: 'single',
-        key: 'D',
-        bpm: 88,
-        timeSignature: '4/4',
-        status: 'final',
-        updatedAt: Date.now() - 7200000,
-        content: `<h3>[Verse 1]</h3><p>Cahaya berputar di kejauhan [D]</p><p>Menembus pekatnya halimun lautan [Bm]</p>`,
-        versions: [
-          {
-            id: 'v-track-1-1',
-            name: 'Versi 1',
-            content: `<h3>[Verse 1]</h3><p>Cahaya berputar di kejauhan [D]</p><p>Menembus pekatnya halimun lautan [Bm]</p>`,
-            key: 'D',
-            bpm: 88,
-            isFinal: true,
-            createdAt: Date.now() - 7200000,
-          }
-        ],
-        activeVersionId: 'v-track-1-1',
-      },
-      {
-        id: 'track-ep-2',
-        title: '02. Lorong Tanpa Suara',
-        projectType: 'single',
-        key: 'Bm',
-        bpm: 92,
-        timeSignature: '4/4',
-        status: 'progress',
-        updatedAt: Date.now() - 3600000,
-        content: `<h3>[Verse 1]</h3><p>Gema langkah membentur dinding [Bm]</p><p>Hati yang sunyi mulai bergeming [G]</p>`,
-        versions: [
-          {
-            id: 'v-track-2-1',
-            name: 'Versi 1',
-            content: `<h3>[Verse 1]</h3><p>Gema langkah membentur dinding [Bm]</p><p>Hati yang sunyi mulai bergeming [G]</p>`,
-            key: 'Bm',
-            bpm: 92,
-            isFinal: true,
-            createdAt: Date.now() - 3600000,
-          }
-        ],
-        activeVersionId: 'v-track-2-1',
-      },
-      {
-        id: 'track-ep-3',
-        title: '03. Hujan di Halte Terakhir',
-        projectType: 'single',
-        key: 'G',
-        bpm: 80,
-        timeSignature: '4/4',
-        status: 'draft',
-        updatedAt: Date.now() - 1800000,
-        content: `<h3>[Verse 1]</h3><p>Air menitik dari atap seng [G]</p><p>Bus terakhir tak kunjung datang [Em]</p>`,
-        versions: [
-          {
-            id: 'v-track-3-1',
-            name: 'Versi 1',
-            content: `<h3>[Verse 1]</h3><p>Air menitik dari atap seng [G]</p><p>Bus terakhir tak kunjung datang [Em]</p>`,
-            key: 'G',
-            bpm: 80,
-            isFinal: true,
-            createdAt: Date.now() - 1800000,
-          }
-        ],
-        activeVersionId: 'v-track-3-1',
-      }
-    ]
-  }
-];
+const DUMMY_SONG_IDS = new Set(['song-1', 'song-2', 'project-ep-1', 'track-ep-1', 'track-ep-2', 'track-ep-3']);
+
+const INITIAL_SONGS: SongDraft[] = [];
+
+const DEFAULT_EMPTY_SONG: SongDraft = {
+  id: 'temp-empty',
+  title: 'Tanpa Judul',
+  projectType: 'single',
+  key: 'C',
+  bpm: 95,
+  timeSignature: '4/4',
+  status: 'draft',
+  updatedAt: Date.now(),
+  content: '<h3>[Verse 1]</h3><p></p><h3>[Chorus]</h3><p></p>',
+  versions: [
+    {
+      id: 'v-1',
+      name: 'Versi 1',
+      content: '<h3>[Verse 1]</h3><p></p><h3>[Chorus]</h3><p></p>',
+      key: 'C',
+      bpm: 95,
+      isFinal: true,
+      createdAt: Date.now(),
+    }
+  ],
+  activeVersionId: 'v-1',
+};
 
 export function ensureSongVersions(song: SongDraft): SongDraft {
   const projectType = song.projectType || 'single';
@@ -288,16 +156,17 @@ export function useSongs() {
       const saved = localStorage.getItem('fals_songs');
       if (saved) {
         const parsed: SongDraft[] = JSON.parse(saved);
-        return parsed.map(ensureSongVersions);
+        const nonDummy = parsed.filter(s => !DUMMY_SONG_IDS.has(s.id));
+        return nonDummy.map(ensureSongVersions);
       }
-      return INITIAL_SONGS.map(ensureSongVersions);
+      return [];
     } catch {
-      return INITIAL_SONGS.map(ensureSongVersions);
+      return [];
     }
   });
 
   const [currentSongId, setCurrentSongId] = useState<string>(() => {
-    return songs[0]?.id || 'song-1';
+    return songs[0]?.id || '';
   });
 
   const [activeParentAlbumId, setActiveParentAlbumId] = useState<string | null>(null);
@@ -335,23 +204,29 @@ export function useSongs() {
             const remoteSongs: SongDraft[] = [];
             snapshot.forEach((docSnap) => {
               const data = docSnap.data() as SongDraft;
-              remoteSongs.push(ensureSongVersions(data));
+              if (!DUMMY_SONG_IDS.has(data.id)) {
+                remoteSongs.push(ensureSongVersions(data));
+              }
             });
-            // Sort by updatedAt descending
             remoteSongs.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
             setSongs(remoteSongs);
           } else {
-            // First time login with empty Firestore: upload local songs to cloud
+            // First time login with empty Firestore: upload local songs if any non-dummy exist
             const localSaved = localStorage.getItem('fals_songs');
-            const itemsToUpload = localSaved ? JSON.parse(localSaved) : INITIAL_SONGS;
-            const batch = writeBatch(db);
-            itemsToUpload.forEach((s: SongDraft) => {
-              const songDoc = doc(db, 'users', currentUser.uid, 'songs', s.id);
-              batch.set(songDoc, sanitizeSongForFirestore(ensureSongVersions(s), currentUser.uid));
-            });
-            batch.commit().catch(err => {
-              console.warn('Initial cloud migration deferred:', err);
-            });
+            if (localSaved) {
+              const itemsToUpload = JSON.parse(localSaved);
+              const nonDummy = itemsToUpload.filter((s: SongDraft) => !DUMMY_SONG_IDS.has(s.id));
+              if (nonDummy.length > 0) {
+                const batch = writeBatch(db);
+                nonDummy.forEach((s: SongDraft) => {
+                  const songDoc = doc(db, 'users', currentUser.uid, 'songs', s.id);
+                  batch.set(songDoc, sanitizeSongForFirestore(ensureSongVersions(s), currentUser.uid));
+                });
+                batch.commit().catch(err => {
+                  console.warn('Initial cloud migration deferred:', err);
+                });
+              }
+            }
           }
         },
         (error) => {
@@ -439,7 +314,7 @@ export function useSongs() {
   };
 
   const lookup = findSong(currentSongId);
-  const currentSong = lookup ? ensureSongVersions(lookup.song) : ensureSongVersions(songs[0] || INITIAL_SONGS[0]);
+  const currentSong = lookup ? ensureSongVersions(lookup.song) : ensureSongVersions(songs[0] || DEFAULT_EMPTY_SONG);
   const currentParentAlbum = lookup?.parentAlbum || (activeParentAlbumId ? songs.find(s => s.id === activeParentAlbumId) : undefined);
 
   const updateSong = (updatedSong: SongDraft) => {
