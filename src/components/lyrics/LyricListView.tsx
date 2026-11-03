@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { SongDraft, ProjectType, SongStatus } from '../../types';
 import { formatDate } from '../../utils/dateFormatter';
-import { Plus, Search, Trash2, FileText, Disc3, Layers, Library, Cloud } from 'lucide-react';
+import { Plus, Search, Trash2, FileText, Disc3, Layers, Library, Cloud, Star } from 'lucide-react';
 import { NewProjectModal } from './NewProjectModal';
 import { UserSyncModal } from '../auth/UserSyncModal';
 import { useAuth } from '../../context/AuthContext';

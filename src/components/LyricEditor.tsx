@@ -22,6 +22,7 @@ import {
   Menu,
   Copy,
   Check,
+  Star,
 } from 'lucide-react';
 
 interface LyricEditorProps {
@@ -155,6 +156,22 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
   const [isChordDrawerOpen, setIsChordDrawerOpen] = useState(false);
   const [isWordBankOpen, setIsWordBankOpen] = useState(false);
   const [isCopiedLyrics, setIsCopiedLyrics] = useState(false);
+
+  // Active version calculation
+  const activeVersion = useMemo(() => {
+    if (currentSong.versions && currentSong.versions.length > 0) {
+      return currentSong.versions.find((v) => v.id === currentSong.activeVersionId) || currentSong.versions[0];
+    }
+    return null;
+  }, [currentSong.versions, currentSong.activeVersionId]);
+
+  const activeVersionShort = useMemo(() => {
+    if (!activeVersion) return 'V1';
+    const match = activeVersion.name.match(/(\d+)/);
+    if (match) return `V${match[1]}`;
+    const idx = (currentSong.versions || []).findIndex((v) => v.id === activeVersion.id);
+    return idx >= 0 ? `V${idx + 1}` : 'V1';
+  }, [activeVersion, currentSong.versions]);
 
   // Gesture state refs to distinguish tap from touch scroll/drag
   const pointerStateRef = useRef<{
@@ -729,6 +746,19 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
             />
           </div>
 
+          {/* Active Version Badge Desktop */}
+          <button
+            type="button"
+            onClick={() => setIsProjectDrawerOpen(true)}
+            className="h-8 flex items-center gap-1 px-2 bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg text-xs font-mono font-bold transition cursor-pointer shadow-2xs group shrink-0"
+            title="Kelola Versi Lirik di Hub Proyek"
+          >
+            <span className="text-[#1C1917]">{activeVersionShort}</span>
+            {activeVersion?.isFinal && (
+              <Star className="w-3 h-3 fill-amber-500 text-amber-500 shrink-0" />
+            )}
+          </button>
+
           {/* Salin Lirik Clean Button Desktop */}
           <button
             type="button"
@@ -763,7 +793,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
 
       {/* MOBILE HEADER (2 Rows: Row 1 = Controls, Row 2 = Full Title) */}
       <div className="md:hidden sticky top-0 z-20 bg-[#FAF9F5]/95 backdrop-blur-md border-b border-[#E5E4DE] pt-1.5 pb-2 px-3">
-        {/* Row 1: Key, BPM, Status & Salin Lirik */}
+        {/* Row 1: Key, BPM, Status, Versi & Salin Lirik */}
         <div className="flex items-center justify-between gap-1.5 pb-1">
           <div className="flex items-center gap-1 min-w-0">
             {/* Key selector trigger */}
@@ -814,6 +844,19 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
                 triggerRef={mobileStatusBtnRef}
               />
             </div>
+
+            {/* Active Version Badge Mobile */}
+            <button
+              type="button"
+              onClick={() => setIsProjectDrawerOpen(true)}
+              className="h-7.5 flex items-center gap-0.5 px-1.5 bg-[#FFFFFF] active:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg text-[10px] font-mono font-bold cursor-pointer shadow-2xs group shrink-0"
+              title="Kelola Versi Lirik di Hub Proyek"
+            >
+              <span className="text-[#1C1917]">{activeVersionShort}</span>
+              {activeVersion?.isFinal && (
+                <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500 shrink-0" />
+              )}
+            </button>
 
             {/* Salin Lirik Clean Button Mobile */}
             <button

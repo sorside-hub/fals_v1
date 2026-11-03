@@ -24,6 +24,7 @@ import { formatDate } from '../../utils/dateFormatter';
 import { AudioPill } from './AudioPill';
 import { AudioRecorderModal } from './AudioRecorderModal';
 import { MoveToAlbumModal } from './MoveToAlbumModal';
+import { getVersionBadgeInfo } from '../../utils/versionBadge';
 
 interface SongProjectDrawerProps {
   isOpen: boolean;
@@ -300,9 +301,10 @@ export const SongProjectDrawer: React.FC<SongProjectDrawerProps> = ({
 
           {/* List of Versions */}
           <div className="space-y-2">
-            {versions.map((ver) => {
+            {versions.map((ver, idx) => {
               const isActive = ver.id === song.activeVersionId;
               const isEditing = editingVersionId === ver.id;
+              const badgeInfo = getVersionBadgeInfo(ver, idx);
 
               return (
                 <div
@@ -327,10 +329,15 @@ export const SongProjectDrawer: React.FC<SongProjectDrawerProps> = ({
                       }`}
                     />
 
+                    {/* Version Badge Pill */}
+                    <span className="px-1.5 py-0.5 bg-[#FAF9F5] border border-[#E5E4DE] text-[10.5px] font-mono font-bold text-[#1C1917] rounded shrink-0">
+                      {badgeInfo.badgeLabel}
+                    </span>
+
                     {/* Name input or text */}
                     {isEditing ? (
                       <div
-                        className="flex items-center gap-1 flex-1"
+                        className="flex items-center gap-1 flex-1 min-w-0"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <input
@@ -340,21 +347,24 @@ export const SongProjectDrawer: React.FC<SongProjectDrawerProps> = ({
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') handleSaveRename(e, ver.id);
                           }}
+                          placeholder="Judul versi (opsional)..."
                           className="w-full px-2 py-0.5 text-xs bg-[#FAF9F5] border border-[#1C1917] rounded outline-hidden font-bold"
                           autoFocus
                         />
                         <button
                           type="button"
                           onClick={(e) => handleSaveRename(e, ver.id)}
-                          className="p-1 bg-[#1C1917] text-white rounded cursor-pointer"
+                          className="p-1 bg-[#1C1917] text-white rounded cursor-pointer shrink-0"
                         >
                           <Check className="w-3 h-3" />
                         </button>
                       </div>
                     ) : (
-                      <span className="font-bold text-xs text-[#1C1917] truncate">
-                        {ver.name}
-                      </span>
+                      badgeInfo.customTitle && (
+                        <span className="font-bold text-xs text-[#1C1917] truncate">
+                          {badgeInfo.customTitle}
+                        </span>
+                      )
                     )}
 
                     {/* Final Version Badge */}
