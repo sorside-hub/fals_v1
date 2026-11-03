@@ -54,12 +54,22 @@ export async function saveAudioBlob(id: string, blob: Blob): Promise<void> {
       const { data: { user } } = await client.auth.getUser();
       if (user) {
         const filePath = `${user.id}/${id}`;
-        client.storage.from(BUCKET_NAME).upload(filePath, blob, {
-          upsert: true,
-          contentType: blob.type || 'audio/webm',
-        }).catch((uploadErr) => {
-          console.warn('Supabase storage background upload deferred:', uploadErr);
-        });
+        let contentType = blob.type;
+        if (!contentType || contentType === 'application/octet-stream') {
+          contentType = 'audio/mpeg';
+        }
+
+        const buffer = await blob.arrayBuffer();
+        const { error: uploadErr } = await client.storage
+          .from(BUCKET_NAME)
+          .upload(filePath, buffer, {
+            upsert: true,
+            contentType,
+          });
+
+        if (uploadErr) {
+          console.warn('Supabase storage upload error:', uploadErr.message);
+        }
       }
     } catch (err) {
       console.warn('Supabase storage check warning:', err);

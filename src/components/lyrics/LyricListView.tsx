@@ -239,18 +239,16 @@ export const LyricListView: React.FC<LyricListViewProps> = ({
                     </div>
                   </div>
 
-                  {songs.length > 1 && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSongToDelete(song);
-                      }}
-                      className="p-1.5 rounded-lg text-[#A8A29E] hover:text-rose-600 hover:bg-[#FAF9F5] transition cursor-pointer shrink-0"
-                      title="Hapus proyek lagu ini"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSongToDelete(song);
+                    }}
+                    className="p-1.5 rounded-lg text-[#A8A29E] hover:text-rose-600 hover:bg-[#FAF9F5] transition cursor-pointer shrink-0"
+                    title="Hapus proyek lagu ini"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
 
                 {/* Bottom Row: Metadata info */}

@@ -156,12 +156,13 @@ export function useSongs() {
     }
   }, [songs]);
 
-  // Supabase Real-Time & Initial Sync
+  // Supabase Real-Time & Master Benchmark Sync
   useEffect(() => {
     const config = getStoredSupabaseConfig();
     if (!config.isConfigured) return;
 
     const client = getSupabase();
+    let channel: any = null;
 
     const fetchRemoteSongs = async (userId: string) => {
       try {
@@ -175,24 +176,65 @@ export function useSongs() {
           return;
         }
 
+        const migrationKey = `fals_migrated_${userId}`;
+        const hasMigrated = localStorage.getItem(migrationKey) === 'true';
+
         if (data && data.length > 0) {
           const remoteSongs = data.map(mapRowToSong).filter(s => !DUMMY_SONG_IDS.has(s.id));
           setSongs(remoteSongs);
+          localStorage.setItem(migrationKey, 'true');
         } else {
-          // Empty remote: if local has non-dummy songs, migrate them to Supabase
-          const localSaved = localStorage.getItem('fals_songs');
-          if (localSaved) {
-            const parsed = JSON.parse(localSaved);
-            const nonDummy = parsed.filter((s: SongDraft) => !DUMMY_SONG_IDS.has(s.id));
-            if (nonDummy.length > 0) {
-              const rows = nonDummy.map((s: SongDraft) => mapSongToRow(ensureSongVersions(s), userId));
-              await client.from('songs').upsert(rows);
+          // Remote is empty (0 songs in Supabase)
+          if (hasMigrated) {
+            // User already synced before and intentionally deleted all songs (or has 0 songs in cloud)
+            setSongs([]);
+          } else {
+            // First time ever logging in with this user: migrate local draft songs to Supabase once
+            const localSaved = localStorage.getItem('fals_songs');
+            if (localSaved) {
+              const parsed = JSON.parse(localSaved);
+              const nonDummy = parsed.filter((s: SongDraft) => !DUMMY_SONG_IDS.has(s.id));
+              if (nonDummy.length > 0) {
+                const rows = nonDummy.map((s: SongDraft) => mapSongToRow(ensureSongVersions(s), userId));
+                await client.from('songs').upsert(rows);
+              }
             }
+            localStorage.setItem(migrationKey, 'true');
           }
         }
       } catch (err) {
         console.warn('Remote song sync deferred:', err);
       }
+    };
+
+    const subscribeRealtime = (userId: string) => {
+      if (channel) {
+        client.removeChannel(channel);
+      }
+      channel = client
+        .channel(`public:songs:${userId}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'songs', filter: `user_id=eq.${userId}` },
+          (payload) => {
+            if (payload.eventType === 'DELETE') {
+              const deletedId = payload.old.id;
+              setSongs(prev => prev.filter(s => s.id !== deletedId));
+            } else if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+              if (!payload.new) return;
+              const updatedSong = mapRowToSong(payload.new);
+              setSongs(prev => {
+                const exists = prev.some(s => s.id === updatedSong.id);
+                if (exists) {
+                  return prev.map(s => s.id === updatedSong.id ? updatedSong : s);
+                } else {
+                  return [updatedSong, ...prev];
+                }
+              });
+            }
+          }
+        )
+        .subscribe();
     };
 
     // Check current session
@@ -201,6 +243,7 @@ export function useSongs() {
       currentUserIdRef.current = user?.id || null;
       if (user) {
         fetchRemoteSongs(user.id);
+        subscribeRealtime(user.id);
       }
     });
 
@@ -210,11 +253,17 @@ export function useSongs() {
       currentUserIdRef.current = user?.id || null;
       if (user) {
         fetchRemoteSongs(user.id);
+        subscribeRealtime(user.id);
+      } else if (channel) {
+        client.removeChannel(channel);
       }
     });
 
     return () => {
       subscription.unsubscribe();
+      if (channel) {
+        client.removeChannel(channel);
+      }
     };
   }, []);
 

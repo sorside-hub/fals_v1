@@ -67,12 +67,13 @@ export function useBarBank() {
     }
   }, [barItems]);
 
-  // Sync with Supabase when authenticated
+  // Sync with Supabase when authenticated (Master Benchmark & Real-Time)
   useEffect(() => {
     const config = getStoredSupabaseConfig();
     if (!config.isConfigured) return;
 
     const client = getSupabase();
+    let channel: any = null;
 
     const fetchRemoteBars = async (userId: string) => {
       try {
@@ -86,24 +87,62 @@ export function useBarBank() {
           return;
         }
 
+        const migrationKey = `fals_bars_migrated_${userId}`;
+        const hasMigrated = localStorage.getItem(migrationKey) === 'true';
+
         if (data && data.length > 0) {
           const remoteBars = data.map(mapRowToBar).filter(b => !DUMMY_BAR_IDS.has(b.id));
           setBarItems(remoteBars);
+          localStorage.setItem(migrationKey, 'true');
         } else {
-          // If remote empty and local has non-dummy bars, migrate them
-          const localSaved = localStorage.getItem('fals_bar_bank');
-          if (localSaved) {
-            const parsed = JSON.parse(localSaved);
-            const nonDummy = parsed.filter((b: BarItem) => !DUMMY_BAR_IDS.has(b.id));
-            if (nonDummy.length > 0) {
-              const rows = nonDummy.map((b: BarItem) => mapBarToRow(b, userId));
-              await client.from('bars').upsert(rows);
+          if (hasMigrated) {
+            setBarItems([]);
+          } else {
+            const localSaved = localStorage.getItem('fals_bar_bank');
+            if (localSaved) {
+              const parsed = JSON.parse(localSaved);
+              const nonDummy = parsed.filter((b: BarItem) => !DUMMY_BAR_IDS.has(b.id));
+              if (nonDummy.length > 0) {
+                const rows = nonDummy.map((b: BarItem) => mapBarToRow(b, userId));
+                await client.from('bars').upsert(rows);
+              }
             }
+            localStorage.setItem(migrationKey, 'true');
           }
         }
       } catch (err) {
         console.warn('Remote bars sync deferred:', err);
       }
+    };
+
+    const subscribeRealtime = (userId: string) => {
+      if (channel) {
+        client.removeChannel(channel);
+      }
+      channel = client
+        .channel(`public:bars:${userId}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'bars', filter: `user_id=eq.${userId}` },
+          (payload) => {
+            if (payload.eventType === 'DELETE') {
+              const deletedId = payload.old.id;
+              setBarItems(prev => prev.filter(b => b.id !== deletedId));
+            } else if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+              if (!payload.new) return;
+              const updatedBar = mapRowToBar(payload.new);
+              setBarItems(prev => {
+                const exists = prev.some(b => b.id === updatedBar.id);
+                if (exists) {
+                  return prev.map(b => b.id === updatedBar.id ? updatedBar : b);
+                } else {
+                  return [updatedBar, ...prev];
+                }
+              });
+            }
+          }
+        )
+        .subscribe();
     };
 
     // Check active session
@@ -112,6 +151,7 @@ export function useBarBank() {
       currentUserIdRef.current = user?.id || null;
       if (user) {
         fetchRemoteBars(user.id);
+        subscribeRealtime(user.id);
       }
     });
 
@@ -121,11 +161,17 @@ export function useBarBank() {
       currentUserIdRef.current = user?.id || null;
       if (user) {
         fetchRemoteBars(user.id);
+        subscribeRealtime(user.id);
+      } else if (channel) {
+        client.removeChannel(channel);
       }
     });
 
     return () => {
       subscription.unsubscribe();
+      if (channel) {
+        client.removeChannel(channel);
+      }
     };
   }, []);
 
