@@ -1,0 +1,56 @@
+2026-11-03T12:28:57.581915Z	Cloning repository...
+2026-11-03T12:29:00.558558Z	From https://github.com/sorside-hub/fals_v1
+2026-11-03T12:29:00.558958Z	 * branch            b818458e7744df07fd7d5658ebc57582782c7300 -> FETCH_HEAD
+2026-11-03T12:29:00.559137Z	
+2026-11-03T12:29:00.631763Z	HEAD is now at b818458 Delete bun.lock
+2026-11-03T12:29:00.632247Z	
+2026-11-03T12:29:00.681449Z	
+2026-11-03T12:29:00.681818Z	Using v2 root directory strategy
+2026-11-03T12:29:00.699065Z	Success: Finished cloning repository files
+2026-11-03T12:29:03.628575Z	Checking for configuration in a Wrangler configuration file (BETA)
+2026-11-03T12:29:03.629165Z	
+2026-11-03T12:29:03.746461Z	No Wrangler configuration file found. Continuing.
+2026-11-03T12:29:03.917781Z	Detected the following tools from environment: npm@10.9.9, nodejs@22.23.4
+2026-11-03T12:29:03.918307Z	Installing project dependencies: npm install --progress=false
+2026-11-03T12:29:15.902414Z	npm error code ERESOLVE
+2026-11-03T12:29:15.902912Z	npm error ERESOLVE could not resolve
+2026-11-03T12:29:15.903042Z	npm error
+2026-11-03T12:29:15.903122Z	npm error While resolving: vite@8.3.5
+2026-11-03T12:29:15.903325Z	npm error Found: esbuild@0.25.12
+2026-11-03T12:29:15.903431Z	npm error node_modules/esbuild
+2026-11-03T12:29:15.903509Z	npm error   dev esbuild@"^0.25.0" from the root project
+2026-11-03T12:29:15.903581Z	npm error
+2026-11-03T12:29:15.903647Z	npm error Could not resolve dependency:
+2026-11-03T12:29:15.903708Z	npm error peerOptional esbuild@"^0.27.0 || ^0.28.0" from vite@8.3.5
+2026-11-03T12:29:15.903771Z	npm error node_modules/vite
+2026-11-03T12:29:15.904004Z	npm error   vite@"^8.3.0" from the root project
+2026-11-03T12:29:15.904062Z	npm error   peer vite@"^5.2.0 || ^6 || ^7 || ^8" from @tailwindcss/vite@4.3.4
+2026-11-03T12:29:15.904125Z	npm error   node_modules/@tailwindcss/vite
+2026-11-03T12:29:15.904344Z	npm error     @tailwindcss/vite@"^4.3.3" from the root project
+2026-11-03T12:29:15.904457Z	npm error   2 more (@vitejs/plugin-react, vite-plugin-pwa)
+2026-11-03T12:29:15.904565Z	npm error
+2026-11-03T12:29:15.904637Z	npm error Conflicting peer dependency: esbuild@0.28.2
+2026-11-03T12:29:15.904806Z	npm error node_modules/esbuild
+2026-11-03T12:29:15.904895Z	npm error   peerOptional esbuild@"^0.27.0 || ^0.28.0" from vite@8.3.5
+2026-11-03T12:29:15.905128Z	npm error   node_modules/vite
+2026-11-03T12:29:15.905246Z	npm error     vite@"^8.3.0" from the root project
+2026-11-03T12:29:15.905453Z	npm error     peer vite@"^5.2.0 || ^6 || ^7 || ^8" from @tailwindcss/vite@4.3.4
+2026-11-03T12:29:15.905557Z	npm error     node_modules/@tailwindcss/vite
+2026-11-03T12:29:15.905669Z	npm error       @tailwindcss/vite@"^4.3.3" from the root project
+2026-11-03T12:29:15.905854Z	npm error     2 more (@vitejs/plugin-react, vite-plugin-pwa)
+2026-11-03T12:29:15.905983Z	npm error
+2026-11-03T12:29:15.906062Z	npm error Fix the upstream dependency conflict, or retry
+2026-11-03T12:29:15.906157Z	npm error this command with --force or --legacy-peer-deps
+2026-11-03T12:29:15.906238Z	npm error to accept an incorrect (and potentially broken) dependency resolution.
+2026-11-03T12:29:15.90638Z	npm error
+2026-11-03T12:29:15.906497Z	npm error
+2026-11-03T12:29:15.906583Z	npm error For a full report see:
+2026-11-03T12:29:15.906664Z	npm error /opt/buildhome/.npm/_logs/2026-11-03T12_29_04_375Z-eresolve-report.txt
+2026-11-03T12:29:15.906779Z	npm error A complete log of this run can be found in: /opt/buildhome/.npm/_logs/2026-11-03T12_29_04_375Z-debug-0.log
+2026-11-03T12:29:15.959686Z	Error: Exit with error code: 1
+2026-11-03T12:29:15.960033Z	    at ChildProcess.<anonymous> (/snapshot/dist/run-build.js)
+2026-11-03T12:29:15.960188Z	    at Object.onceWrapper (node:events:652:26)
+2026-11-03T12:29:15.960338Z	    at ChildProcess.emit (node:events:537:28)
+2026-11-03T12:29:15.960445Z	    at ChildProcess._handle.onexit (node:internal/child_process:291:12)
+2026-11-03T12:29:15.966775Z	Failed: build command exited with code: 1
+2026-11-03T12:29:16.54658Z	Failed: error occurred while running build command
