@@ -98,12 +98,13 @@ export const LabView: React.FC = () => {
       parsedChord.root,
       parsedChord.type,
       parsedChord.notes,
-      parsedChord.intervals
+      parsedChord.intervals,
+      parsedChord.bass
     );
   }, [parsedChord]);
 
   const handlePlayChord = () => {
-    sound.playChord(parsedChord.root, parsedChord.intervals, 3, true, 'guitar');
+    sound.playChord(parsedChord.root, parsedChord.intervals, 3, true, 'guitar', parsedChord.bass);
   };
 
   return (
@@ -167,37 +168,21 @@ export const LabView: React.FC = () => {
             </button>
           </div>
         </div>
-
-        {/* Chord Analysis Info Pill */}
-        <div className="p-2.5 sm:p-3 bg-[#FAF9F5] border border-[#E5E4DE] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] font-mono">
-          <div className="truncate">
-            <span className="text-[#78716C]">Nama:</span>{' '}
-            <span className="font-extrabold text-[#1C1917]">{parsedChord.displayName}</span>
-          </div>
-          <div className="truncate">
-            <span className="text-[#78716C]">Nada:</span>{' '}
-            <span className="font-bold text-[#1C1917]">{parsedChord.notes.join(' - ')}</span>
-          </div>
-          <div className="truncate">
-            <span className="text-[#78716C]">Formula:</span>{' '}
-            <span className="font-semibold text-[#44403C]">{parsedChord.formulaNames}</span>
-          </div>
-        </div>
       </div>
 
       {/* 3. CHORD TYPE SELECTOR GRID (Tab & Chip Buttons) */}
-      <div className="p-3.5 sm:p-5 bg-[#FFFFFF] border border-[#E5E4DE] rounded-2xl shadow-2xs space-y-3.5">
-        <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#78716C]">
-          Pilih Tipe & Variasi Akor
+      <div className="p-3 sm:p-4 bg-[#FFFFFF] border border-[#E5E4DE] rounded-2xl shadow-2xs space-y-2.5">
+        <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#78716C]">
+          Variasi Akor
         </span>
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           {CHORD_TYPE_CATEGORIES.map((cat) => (
-            <div key={cat.category} className="space-y-1.5">
-              <span className="text-[10px] font-mono text-[#A8A29E] uppercase font-bold">
+            <div key={cat.category} className="space-y-1">
+              <span className="text-[9.5px] font-mono text-[#A8A29E] uppercase font-bold">
                 {cat.category}
               </span>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-1">
                 {cat.types.map((t) => {
                   const isSelected = chordType === t.symbol;
 
@@ -206,22 +191,13 @@ export const LabView: React.FC = () => {
                       key={t.symbol}
                       type="button"
                       onClick={() => setChordType(t.symbol)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-all cursor-pointer shadow-2xs active:scale-95 ${
+                      className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all cursor-pointer shadow-2xs active:scale-95 ${
                         isSelected
                           ? 'bg-[#1C1917] text-[#FAF9F5] font-black ring-1 ring-[#1C1917]'
                           : 'bg-[#FAF9F5] hover:bg-[#F5F4EE] text-[#1C1917] border border-[#E5E4DE] font-semibold'
                       }`}
                     >
-                      <span>{t.label}</span>
-                      {t.symbol && (
-                        <span
-                          className={`ml-1 text-[10px] ${
-                            isSelected ? 'text-[#FAF9F5]/70' : 'text-[#78716C]'
-                          }`}
-                        >
-                          ({t.symbol})
-                        </span>
-                      )}
+                      <span>{t.symbol === '' ? 'Mayor (M)' : t.symbol}</span>
                     </button>
                   );
                 })}
@@ -231,9 +207,11 @@ export const LabView: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. GUITAR FRETBOARD DIAGRAM CARD */}
+      {/* 4. GUITAR FRETBOARD DIAGRAM CARD (Menggabungkan Identitas Akor, Nada, Rumus, dan Fretboard) */}
       <GuitarFretboardDiagram
         chordName={fullChordSymbol}
+        displayName={parsedChord.displayName}
+        formulaNames={parsedChord.formulaNames}
         notes={parsedChord.notes}
         shapes={guitarShapes}
         onPlayFullChord={handlePlayChord}

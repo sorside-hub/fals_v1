@@ -5,6 +5,7 @@ export interface ParsedChord {
   rawSymbol: string;
   root: string;
   type: string;
+  bass?: string;
   intervals: number[];
   notes: string[];
   displayName: string;
@@ -13,14 +14,19 @@ export interface ParsedChord {
 }
 
 /**
- * Parses any chord symbol (e.g. "C", "Am", "G7", "Cmaj7", "Dsus2", "F#m", "Bb")
- * into its root note, intervals, chord notes, and music theory metadata.
+ * Parses any chord symbol (e.g. "C", "Am", "G7", "Cmaj7", "C/G", "D/F#", "Dsus2")
+ * into its root note, slash bass, intervals, chord notes, and music theory metadata.
  */
 export function parseChordSymbol(symbol: string): ParsedChord {
   const clean = symbol.trim().replace(/[\[\]]/g, '');
 
+  // Split by slash if present (e.g., C/G -> main="C", slashBass="G")
+  const parts = clean.split('/');
+  const mainPart = parts[0].trim();
+  const rawBass = parts[1] ? parts[1].trim() : null;
+
   // Extract root note: [A-G] followed optionally by '#' or 'b'
-  const match = clean.match(/^([A-G][b#]?)(.*)$/i);
+  const match = mainPart.match(/^([A-G][b#]?)(.*)$/i);
   if (!match) {
     return {
       rawSymbol: clean || 'C',
@@ -55,6 +61,29 @@ export function parseChordSymbol(symbol: string): ParsedChord {
     };
     if (flatToSharp[root]) {
       chromaticRoot = flatToSharp[root];
+    }
+  }
+
+  // Normalize bass note if present
+  let chromaticBass: string | undefined = undefined;
+  if (rawBass) {
+    let bRoot = rawBass.charAt(0).toUpperCase();
+    if (rawBass.length > 1) {
+      const acc = rawBass.charAt(1).toLowerCase();
+      if (acc === '#' || acc === 'b') {
+        bRoot += acc;
+      }
+    }
+    const flatToSharp: Record<string, string> = {
+      'Db': 'C#',
+      'Eb': 'D#',
+      'Gb': 'F#',
+      'Ab': 'G#',
+      'Bb': 'A#',
+    };
+    chromaticBass = flatToSharp[bRoot] || bRoot;
+    if (!CHROMATIC_NOTES.includes(chromaticBass)) {
+      chromaticBass = undefined;
     }
   }
 
@@ -108,17 +137,25 @@ export function parseChordSymbol(symbol: string): ParsedChord {
   const formula = CHORD_FORMULAS[formulaKey] || CHORD_FORMULAS['major'];
   const rootIdx = CHROMATIC_NOTES.indexOf(chromaticRoot);
 
-  const notes = rootIdx !== -1
+  let notes = rootIdx !== -1
     ? formula.intervals.map(semitones => CHROMATIC_NOTES[(rootIdx + semitones) % 12])
     : ['C', 'E', 'G'];
+
+  // If slash bass note is present and not already in notes, include it
+  if (chromaticBass && !notes.includes(chromaticBass)) {
+    notes = [chromaticBass, ...notes];
+  }
+
+  const bassLabel = chromaticBass ? ` (Bass ${chromaticBass})` : '';
 
   return {
     rawSymbol: clean,
     root: chromaticRoot,
     type: formulaKey,
+    bass: chromaticBass,
     intervals: formula.intervals,
     notes,
-    displayName: `${clean} (${formula.name})`,
+    displayName: `${clean}${bassLabel}`,
     feeling: formula.feeling || 'Harmonis',
     formulaNames: formula.formulaNames || '1 - 3 - 5',
   };

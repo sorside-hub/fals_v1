@@ -76,7 +76,8 @@ export function getFullChordShapes(
   root: string,
   chordType: string,
   chordNotes: string[],
-  intervals: number[]
+  intervals: number[],
+  bassNote?: string
 ): ChordShapeVoicing[] {
   const rootPitch = getChromaticIndex(root);
   if (rootPitch === -1) return [];
@@ -98,9 +99,12 @@ export function getFullChordShapes(
     const minF = numericFrets.length > 0 ? Math.min(...numericFrets) : 0;
     const maxF = numericFrets.length > 0 ? Math.max(...numericFrets) : 3;
 
-    // Base fret to display: if any string is open (0) or lowest fret is <= 3, always start at fret 1
+    // Base fret to display:
+    // If any string is open (0), must start at fret 1 so the nut is visible at the top.
+    // If no open strings: only start at 1 if minF <= 2 (e.g. fret 1 or 2 grips like F or B7).
+    // If minF >= 3 and no open strings (e.g. C5 at fret 3, G5 at fret 3, C#5 at fret 4), start at minF!
     const hasOpenString = fretList.includes(0);
-    const baseFret = (hasOpenString || minF <= 3) ? 1 : minF;
+    const baseFret = hasOpenString ? 1 : (minF <= 2 ? 1 : minF);
     const endFret = Math.max(baseFret + 3, maxF);
 
     // Auto-detect Barre info (if any positive fret spans across 2+ strings)
@@ -177,7 +181,7 @@ export function getFullChordShapes(
     };
   };
 
-  // Common Open / Barre Shapes override dictionary (supporting sharp & flat keys)
+  // Common Open / Barre Shapes override dictionary (supporting sharp & flat keys + Slash Chords)
   const OPEN_CHORDS: Record<string, (number | 'x')[]> = {
     'C': ['x', 3, 2, 0, 1, 0],
     'A': ['x', 0, 2, 2, 2, 0],
@@ -220,9 +224,13 @@ export function getFullChordShapes(
     'Cadd9': ['x', 3, 2, 0, 3, 0],
     'C6': ['x', 3, 2, 2, 1, 0],
     'Am6': ['x', 0, 2, 2, 1, 2],
-    'C5': [3, 3, 5, 5, 'x', 'x'],
-    'E5': [0, 2, 2, 'x', 'x', 'x'],
-    'A5': ['x', 0, 2, 2, 'x', 'x'],
+    'C5': ['x', 3, 5, 'x', 'x', 'x'],
+    'E5': [0, 2, 'x', 'x', 'x', 'x'],
+    'A5': ['x', 0, 2, 'x', 'x', 'x'],
+    'D5': ['x', 'x', 0, 2, 'x', 'x'],
+    'G5': [3, 5, 'x', 'x', 'x', 'x'],
+    'F5': [1, 3, 'x', 'x', 'x', 'x'],
+    'B5': ['x', 2, 4, 'x', 'x', 'x'],
     'C9': ['x', 3, 2, 3, 3, 'x'],
     'G9': [3, 'x', 3, 2, 0, 1],
     'A9': ['x', 0, 2, 4, 2, 3],
@@ -249,7 +257,109 @@ export function getFullChordShapes(
     'Caug': ['x', 3, 2, 1, 1, 'x'],
     'Eaug': [0, 3, 2, 1, 1, 0],
     'Aaug': ['x', 0, 3, 2, 2, 1],
+
+    // Popular Slash Chords
+    'C/G': [3, 3, 2, 0, 1, 0],
+    'C/E': [0, 3, 2, 0, 1, 0],
+    'C/Bb': ['x', 3, 2, 3, 1, 0],
+    'D/F#': [2, 'x', 0, 2, 3, 2],
+    'D/A': ['x', 0, 0, 2, 3, 2],
+    'D/C': ['x', 3, 0, 2, 3, 2],
+    'G/B': ['x', 2, 0, 0, 0, 3],
+    'G/D': ['x', 'x', 0, 0, 0, 3],
+    'G/F': [1, 2, 0, 0, 0, 3],
+    'Am/G': [3, 0, 2, 2, 1, 0],
+    'Am/F#': [2, 0, 2, 2, 1, 0],
+    'Am/E': [0, 0, 2, 2, 1, 0],
+    'Am/G#': [4, 0, 2, 2, 1, 0],
+    'F/C': ['x', 3, 3, 2, 1, 1],
+    'F/A': ['x', 0, 3, 2, 1, 1],
+    'A/C#': ['x', 4, 2, 2, 2, 0],
+    'A/E': [0, 0, 2, 2, 2, 0],
+    'A/G': [3, 0, 2, 2, 2, 0],
+    'E/G#': [4, 2, 2, 1, 0, 0],
+    'Em/D': ['x', 'x', 0, 0, 0, 0],
+    'Dm/C': ['x', 3, 0, 2, 3, 1],
+    'Dm/A': ['x', 0, 0, 2, 3, 1],
+    'C7/Bb': ['x', 1, 2, 0, 1, 0],
+    'G7/F': [1, 2, 0, 0, 0, 1],
+    'A7/G': [3, 0, 2, 0, 2, 0],
   };
+
+  // Dedicated Power Chord Voicing Handler (5 / power5)
+  // Power chord STRICTLY contains only Root (1) and Perfect 5th (5).
+  // No 3rds allowed. Default is standard 2-string grip; optional 3-string with octave root.
+  // All other strings are muted ('x').
+  const isPower = chordType === 'power5' || chordType === '5';
+  if (isPower) {
+    const eFret = (rootPitch - getChromaticIndex('E') + 12) % 12;
+    const aFret = (rootPitch - getChromaticIndex('A') + 12) % 12;
+    const dFret = (rootPitch - getChromaticIndex('D') + 12) % 12;
+
+    const powerShapes: ChordShapeVoicing[] = [];
+
+    // 1. Root on String 5 (Senar 5 & 4: Root + 5th) - 2 Senar
+    powerShapes.push(
+      buildVoicing(
+        'p5-s5-2s',
+        aFret === 0 ? 'A5 Open (2-Senar)' : `Root Senar 5 (Fret ${aFret}) - 2 Senar`,
+        ['x', aFret, aFret + 2, 'x', 'x', 'x']
+      )
+    );
+
+    // 2. Root on String 5 (Senar 5, 4, 3: Root + 5th + Octave Root) - 3 Senar
+    powerShapes.push(
+      buildVoicing(
+        'p5-s5-3s',
+        aFret === 0 ? 'A5 Open (3-Senar)' : `Root Senar 5 (Fret ${aFret}) - 3 Senar`,
+        ['x', aFret, aFret + 2, aFret + 2, 'x', 'x']
+      )
+    );
+
+    // 3. Root on String 6 (Senar 6 & 5: Root + 5th) - 2 Senar
+    powerShapes.push(
+      buildVoicing(
+        'p5-s6-2s',
+        eFret === 0 ? 'E5 Open (2-Senar)' : `Root Senar 6 (Fret ${eFret}) - 2 Senar`,
+        [eFret, eFret + 2, 'x', 'x', 'x', 'x']
+      )
+    );
+
+    // 4. Root on String 6 (Senar 6, 5, 4: Root + 5th + Octave Root) - 3 Senar
+    powerShapes.push(
+      buildVoicing(
+        'p5-s6-3s',
+        eFret === 0 ? 'E5 Open (3-Senar)' : `Root Senar 6 (Fret ${eFret}) - 3 Senar`,
+        [eFret, eFret + 2, eFret + 2, 'x', 'x', 'x']
+      )
+    );
+
+    // 5. Root on String 4 (Senar 4 & 3: Root + 5th) - only if fret <= 9
+    if (dFret <= 9) {
+      powerShapes.push(
+        buildVoicing(
+          'p5-s4-2s',
+          dFret === 0 ? 'D5 Open (2-Senar)' : `Root Senar 4 (Fret ${dFret}) - 2 Senar`,
+          ['x', 'x', dFret, dFret + 2, 'x', 'x']
+        )
+      );
+    }
+
+    const uniqueMap = new Map<string, ChordShapeVoicing>();
+    powerShapes.forEach((s) => {
+      const key = s.frets.join(',');
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, s);
+      }
+    });
+
+    return Array.from(uniqueMap.values()).sort((a, b) => {
+      if (a.baseFret !== b.baseFret) {
+        return a.baseFret - b.baseFret;
+      }
+      return a.name.includes('2-Senar') ? -1 : 1;
+    });
+  }
 
   let suffix = '';
   if (chordType === 'maj9') suffix = 'maj9';
@@ -274,11 +384,12 @@ export function getFullChordShapes(
   else if (is7) suffix = '7';
   else if (isMinor) suffix = 'm';
 
-  const chordKey = `${root}${suffix}`;
-  const openFretPattern = OPEN_CHORDS[chordKey];
+  const baseKey = `${root}${suffix}`;
+  const slashKey = bassNote ? `${baseKey}/${bassNote}` : baseKey;
+  const openFretPattern = OPEN_CHORDS[slashKey] || (bassNote ? OPEN_CHORDS[`${root}/${bassNote}`] : undefined) || OPEN_CHORDS[baseKey];
 
   if (openFretPattern) {
-    shapes.push(buildVoicing('open', 'Posisi Open', openFretPattern));
+    shapes.push(buildVoicing('open', bassNote ? `Posisi Open (${slashKey})` : 'Posisi Open', openFretPattern));
   }
 
   // 1. E Shape (Root on String 6)
@@ -286,6 +397,10 @@ export function getFullChordShapes(
   let s6Frets: (number | 'x')[] = [];
   if (chordType === 'dom9' || chordType === '9') {
     s6Frets = [eFret, 'x', eFret, eFret + 1, eFret + 2, 'x'];
+  } else if (chordType === 'dom11' || chordType === '11') {
+    s6Frets = [eFret, 'x', eFret, eFret + 2, eFret + 1, 'x'];
+  } else if (chordType === 'mmaj7') {
+    s6Frets = [eFret, eFret + 2, eFret + 1, eFret, eFret, eFret];
   } else if (chordType === 'm9') {
     s6Frets = [eFret, 'x', eFret, eFret, eFret + 2, 'x'];
   } else if (chordType === 'maj9') {
@@ -302,6 +417,12 @@ export function getFullChordShapes(
     s6Frets = [eFret, 'x', eFret, eFret, eFret - 1, 'x'].map(f => (typeof f === 'number' && f < 0 ? f + 12 : f) as number | 'x');
   } else if (chordType === 'aug' || chordType === 'aug7') {
     s6Frets = [eFret, 'x', eFret + 2, eFret + 1, eFret + 1, 'x'];
+  } else if (chordType === 'maj6' || chordType === '6') {
+    s6Frets = [eFret, 'x', eFret - 1, eFret + 1, eFret + 2, 'x'].map(f => (typeof f === 'number' && f < 0 ? f + 12 : f) as number | 'x');
+  } else if (chordType === 'm6') {
+    s6Frets = [eFret, 'x', eFret - 1, eFret, eFret + 2, 'x'].map(f => (typeof f === 'number' && f < 0 ? f + 12 : f) as number | 'x');
+  } else if (chordType === 'add9') {
+    s6Frets = [eFret, eFret + 2, eFret + 4, eFret + 1, eFret, eFret];
   } else if (isMinor) {
     s6Frets = [eFret, eFret + 2, eFret + 2, eFret, eFret, eFret];
   } else if (is7) {
@@ -325,8 +446,11 @@ export function getFullChordShapes(
   const aFret = (rootPitch - getChromaticIndex('A') + 12) % 12;
   let s5Frets: (number | 'x')[] = [];
   if (chordType === 'dom9' || chordType === '9') {
-    // Classic 9th chord barre (Root on 5th string, e.g. C9: x 3 2 3 3 x)
     s5Frets = ['x', aFret, aFret - 1, aFret, aFret, 'x'].map(f => (typeof f === 'number' && f < 0 ? f + 12 : f) as number | 'x');
+  } else if (chordType === 'dom11' || chordType === '11') {
+    s5Frets = ['x', aFret, aFret, aFret, aFret, 'x'];
+  } else if (chordType === 'mmaj7') {
+    s5Frets = ['x', aFret, aFret + 1, aFret + 1, aFret + 1, aFret];
   } else if (chordType === 'm9') {
     s5Frets = ['x', aFret, aFret - 1, aFret, aFret, aFret].map(f => (typeof f === 'number' && f < 0 ? f + 12 : f) as number | 'x');
   } else if (chordType === 'maj9') {
@@ -341,6 +465,12 @@ export function getFullChordShapes(
     s5Frets = ['x', aFret, aFret + 1, aFret - 1, aFret + 1, 'x'].map(f => (typeof f === 'number' && f < 0 ? f + 12 : f) as number | 'x');
   } else if (chordType === 'm7b5') {
     s5Frets = ['x', aFret, aFret + 1, aFret, aFret + 1, 'x'];
+  } else if (chordType === 'maj6' || chordType === '6') {
+    s5Frets = ['x', aFret, aFret + 4, aFret + 2, aFret + 2, 'x'];
+  } else if (chordType === 'm6') {
+    s5Frets = ['x', aFret, aFret + 4, aFret + 2, aFret + 1, 'x'];
+  } else if (chordType === 'add9') {
+    s5Frets = ['x', aFret, aFret + 2, aFret + 4, aFret + 2, aFret];
   } else if (isMinor) {
     s5Frets = ['x', aFret, aFret + 2, aFret + 2, aFret + 1, aFret];
   } else if (is7) {
@@ -360,37 +490,40 @@ export function getFullChordShapes(
     )
   );
 
-  // 3. C Shape (Root on String 5)
-  const cBarre = (rootPitch - getChromaticIndex('C') + 12) % 12;
-  if (cBarre > 0 || isM7) {
-    let cFrets: (number | 'x')[] = [];
+  // 3. C Shape (Root on String 5) & 4. D Shape (Root on String 4)
+  // ONLY for standard Major, Minor, Dominant 7, and Major 7 chords where CAGED voicings are natural
+  const isCagedStandard = ['major', '', 'minor', 'm', 'dom7', '7', 'maj7', 'm7', 'min7'].includes(chordType);
+  if (isCagedStandard) {
+    const cBarre = (rootPitch - getChromaticIndex('C') + 12) % 12;
+    if (cBarre > 0 || isM7) {
+      let cFrets: (number | 'x')[] = [];
+      if (isMinor) {
+        cFrets = ['x', cBarre + 3, cBarre + 1, cBarre, cBarre + 1, cBarre];
+      } else if (isM7) {
+        cFrets = ['x', cBarre + 3, cBarre + 2, cBarre, cBarre, cBarre];
+      } else {
+        cFrets = ['x', cBarre + 3, cBarre + 2, cBarre, cBarre + 1, cBarre];
+      }
+      shapes.push(
+        buildVoicing('shape-c', cBarre === 0 ? 'C-Shape (Open)' : `C-Shape (Fret ${cBarre})`, cFrets)
+      );
+    }
+
+    const dFret = (rootPitch - getChromaticIndex('D') + 12) % 12;
+    let dFrets: (number | 'x')[] = [];
     if (isMinor) {
-      cFrets = ['x', cBarre + 3, cBarre + 1, cBarre, cBarre + 1, cBarre];
+      dFrets = ['x', 'x', dFret, dFret + 2, dFret + 3, dFret + 1];
+    } else if (is7) {
+      dFrets = ['x', 'x', dFret, dFret + 2, dFret + 1, dFret + 2];
     } else if (isM7) {
-      cFrets = ['x', cBarre + 3, cBarre + 2, cBarre, cBarre, cBarre];
+      dFrets = ['x', 'x', dFret, dFret + 2, dFret + 2, dFret + 2];
     } else {
-      cFrets = ['x', cBarre + 3, cBarre + 2, cBarre, cBarre + 1, cBarre];
+      dFrets = ['x', 'x', dFret, dFret + 2, dFret + 3, dFret + 2];
     }
     shapes.push(
-      buildVoicing('shape-c', cBarre === 0 ? 'C-Shape (Open)' : `C-Shape (Fret ${cBarre})`, cFrets)
+      buildVoicing('shape-d', `D-Shape (Fret ${dFret || 12})`, dFrets)
     );
   }
-
-  // 4. D Shape (Root on String 4)
-  const dFret = (rootPitch - getChromaticIndex('D') + 12) % 12;
-  let dFrets: (number | 'x')[] = [];
-  if (isMinor) {
-    dFrets = ['x', 'x', dFret, dFret + 2, dFret + 3, dFret + 1];
-  } else if (is7) {
-    dFrets = ['x', 'x', dFret, dFret + 2, dFret + 1, dFret + 2];
-  } else if (isM7) {
-    dFrets = ['x', 'x', dFret, dFret + 2, dFret + 2, dFret + 2];
-  } else {
-    dFrets = ['x', 'x', dFret, dFret + 2, dFret + 3, dFret + 2];
-  }
-  shapes.push(
-    buildVoicing('shape-d', `D-Shape (Fret ${dFret || 12})`, dFrets)
-  );
 
   // Filter unique shapes (by frets pattern string representation) and sort by base fret
   const uniqueMap = new Map<string, ChordShapeVoicing>();

@@ -7,6 +7,8 @@ import { sound } from '../../utils/audioEngine';
 
 interface GuitarFretboardDiagramProps {
   chordName: string;
+  displayName: string;
+  formulaNames: string;
   notes: string[];
   shapes: ChordShapeVoicing[];
   onPlayFullChord?: () => void;
@@ -14,6 +16,8 @@ interface GuitarFretboardDiagramProps {
 
 export const GuitarFretboardDiagram: React.FC<GuitarFretboardDiagramProps> = ({
   chordName,
+  displayName,
+  formulaNames,
   notes,
   shapes,
   onPlayFullChord,
@@ -37,6 +41,23 @@ export const GuitarFretboardDiagram: React.FC<GuitarFretboardDiagramProps> = ({
     }, 250);
   };
 
+  const handlePlayStrum = () => {
+    if (!currentShape) {
+      if (onPlayFullChord) onPlayFullChord();
+      return;
+    }
+    const playable = currentShape.positions.filter((p) => p.fret !== 'x');
+    if (playable.length === 0) {
+      if (onPlayFullChord) onPlayFullChord();
+      return;
+    }
+    playable.forEach((pos, idx) => {
+      setTimeout(() => {
+        handlePlayString(pos.stringNum, pos.fret);
+      }, idx * 35);
+    });
+  };
+
   const handlePlayArpeggio = () => {
     if (!currentShape) return;
     const playable = currentShape.positions.filter((p) => p.fret !== 'x');
@@ -55,10 +76,11 @@ export const GuitarFretboardDiagram: React.FC<GuitarFretboardDiagramProps> = ({
     );
   }
 
-  // Diagram dimensions
-  // Standard 6 strings, 4 or 5 fret slots
+  // Diagram dimensions: dynamic fret slots based on actual shape frets (minimum 4 frets)
+  const numericFrets = (currentShape.frets || []).filter((f): f is number => typeof f === 'number' && f > 0);
+  const maxFret = numericFrets.length > 0 ? Math.max(...numericFrets) : 3;
   const startFret = currentShape.baseFret || 1;
-  const numFrets = 4;
+  const numFrets = Math.max(4, maxFret - startFret + 1);
   const displayFrets = Array.from({ length: numFrets }, (_, i) => startFret + i);
 
   // SVG Coordinates
@@ -82,51 +104,62 @@ export const GuitarFretboardDiagram: React.FC<GuitarFretboardDiagramProps> = ({
 
   return (
     <div className="w-full bg-[#FFFFFF] border border-[#E5E4DE] rounded-2xl p-4 sm:p-5 shadow-2xs space-y-4">
-      {/* Header Info & Shape Switcher */}
-      <div className="flex items-center justify-between gap-2 border-b border-[#F0EFEA] pb-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-mono font-bold text-[#78716C] uppercase tracking-wider">
-              Posisi / Voicing
-            </span>
-            <span className="px-1.5 py-0.5 rounded bg-[#FAF9F5] border border-[#E5E4DE] text-[10px] font-mono font-bold text-[#1C1917]">
-              {selectedShapeIndex + 1} dari {shapes.length}
-            </span>
-          </div>
-          <div className="text-xs font-bold text-[#1C1917] mt-0.5 truncate">
-            {currentShape.name || `Bentuk ${selectedShapeIndex + 1}`}
+      {/* Header: Chord Identity & Metadata */}
+      <div className="space-y-2.5">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="px-2.5 py-1 bg-[#1C1917] text-[#FAF9F5] rounded-xl font-mono font-black text-sm sm:text-base shadow-xs shrink-0">
+            {chordName}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="text-xs sm:text-sm font-bold text-[#1C1917] truncate">
+              {displayName.replace(chordName, '').trim().replace(/^\((.*)\)$/, '$1') || displayName}
+            </div>
+            <div className="text-[10.5px] font-mono text-[#78716C] truncate">
+              {currentShape.name || `Bentuk ${selectedShapeIndex + 1}`}
+            </div>
           </div>
         </div>
 
-        {/* Carousel Prev/Next Buttons */}
-        <div className="flex items-center gap-1 shrink-0">
-          <button
-            type="button"
-            disabled={shapes.length <= 1}
-            onClick={() => setSelectedShapeIndex((prev) => (prev > 0 ? prev - 1 : shapes.length - 1))}
-            className="w-7 h-7 rounded-lg bg-[#FAF9F5] hover:bg-[#F5F4EE] disabled:opacity-40 border border-[#E5E4DE] flex items-center justify-center text-[#1C1917] cursor-pointer"
-            title="Bentuk Sebelumnya"
-          >
-            <ChevronLeft className="w-3.5 h-3.5" />
-          </button>
-          <button
-            type="button"
-            disabled={shapes.length <= 1}
-            onClick={() => setSelectedShapeIndex((prev) => (prev < shapes.length - 1 ? prev + 1 : 0))}
-            className="w-7 h-7 rounded-lg bg-[#FAF9F5] hover:bg-[#F5F4EE] disabled:opacity-40 border border-[#E5E4DE] flex items-center justify-center text-[#1C1917] cursor-pointer"
-            title="Bentuk Berikutnya"
-          >
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
+        {/* Compact Metadata Row: Nada & Formula (Symmetrically Centered Vertically & Horizontally) */}
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[10.5px] font-mono py-2.5 border-y border-[#F0EFEA] text-center">
+          <div>
+            <span className="text-[#78716C]">Nada:</span>{' '}
+            <span className="font-bold text-[#1C1917]">{notes.join(' - ')}</span>
+          </div>
+          <span className="text-[#D6D3D1]" aria-hidden="true">•</span>
+          <div>
+            <span className="text-[#78716C]">Rumus:</span>{' '}
+            <span className="font-semibold text-[#44403C]">{formulaNames}</span>
+          </div>
         </div>
       </div>
 
-      {/* SVG Guitar Diagram */}
-      <div className="flex flex-col items-center justify-center py-2 select-none">
-        <svg
-          viewBox={`0 0 ${width} ${height + 15}`}
-          className="w-56 sm:w-64 max-w-full drop-shadow-2xs overflow-visible"
+      {/* Voicing Counter Indicator */}
+      <div className="flex items-center justify-center -mb-1">
+        <span className="px-2.5 py-0.5 rounded-md bg-[#FAF9F5] border border-[#E5E4DE] text-[11px] font-mono font-bold text-[#1C1917] shadow-2xs">
+          {selectedShapeIndex + 1}/{shapes.length}
+        </span>
+      </div>
+
+      {/* Diagram with Left & Right Voicing Nav Buttons: < diagram > */}
+      <div className="flex items-center justify-center gap-1.5 sm:gap-4 py-1 select-none">
+        {/* Tombol Sebelumnya (<) */}
+        <button
+          type="button"
+          disabled={shapes.length <= 1}
+          onClick={() => setSelectedShapeIndex((prev) => (prev > 0 ? prev - 1 : shapes.length - 1))}
+          className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#FAF9F5] hover:bg-[#F5F4EE] active:scale-95 disabled:opacity-25 disabled:pointer-events-none border border-[#E5E4DE] flex items-center justify-center text-[#1C1917] cursor-pointer shadow-2xs shrink-0 transition"
+          title="Bentuk Sebelumnya"
         >
+          <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+        </button>
+
+        {/* SVG Guitar Diagram */}
+        <div className="flex items-center justify-center">
+          <svg
+            viewBox={`0 0 ${width} ${height + 15}`}
+            className="w-52 sm:w-60 max-w-full drop-shadow-2xs overflow-visible"
+          >
           {/* Nut line (fret 0 bar) if starting at fret 1 */}
           {startFret === 1 ? (
             <rect
@@ -318,27 +351,41 @@ export const GuitarFretboardDiagram: React.FC<GuitarFretboardDiagramProps> = ({
 
             return null;
           })}
-        </svg>
-      </div>
+          </svg>
+        </div>
 
-      {/* Audio Play Controls */}
-      <div className="flex items-center gap-2 pt-2 border-t border-[#F0EFEA]">
+        {/* Tombol Berikutnya (>) */}
         <button
           type="button"
-          onClick={onPlayFullChord}
-          className="flex-1 py-2 px-3 bg-[#1C1917] hover:bg-[#292524] text-[#FAF9F5] rounded-xl text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-2xs active:scale-95"
+          disabled={shapes.length <= 1}
+          onClick={() => setSelectedShapeIndex((prev) => (prev < shapes.length - 1 ? prev + 1 : 0))}
+          className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#FAF9F5] hover:bg-[#F5F4EE] active:scale-95 disabled:opacity-25 disabled:pointer-events-none border border-[#E5E4DE] flex items-center justify-center text-[#1C1917] cursor-pointer shadow-2xs shrink-0 transition"
+          title="Bentuk Berikutnya"
+        >
+          <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+        </button>
+      </div>
+
+      {/* Audio Play Controls (Centered & Simplified) */}
+      <div className="flex items-center justify-center gap-2.5 pt-2 border-t border-[#F0EFEA]">
+        <button
+          type="button"
+          onClick={handlePlayStrum}
+          className="px-5 py-2 bg-[#1C1917] hover:bg-[#292524] text-[#FAF9F5] rounded-xl text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-2xs active:scale-95"
+          title="Strum Seluruh Senar Akor"
         >
           <Volume2 className="w-3.5 h-3.5" />
-          <span>Strum Akor</span>
+          <span>Strum</span>
         </button>
 
         <button
           type="button"
           onClick={handlePlayArpeggio}
-          className="flex-1 py-2 px-3 bg-[#FAF9F5] hover:bg-[#F5F4EE] border border-[#E5E4DE] text-[#1C1917] rounded-xl text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-2xs active:scale-95"
+          className="px-5 py-2 bg-[#FAF9F5] hover:bg-[#F5F4EE] border border-[#E5E4DE] text-[#1C1917] rounded-xl text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-2xs active:scale-95"
+          title="Petik Senar Satu per Satu"
         >
           <Play className="w-3.5 h-3.5" />
-          <span>Petik (Arpeggio)</span>
+          <span>Petik</span>
         </button>
       </div>
     </div>

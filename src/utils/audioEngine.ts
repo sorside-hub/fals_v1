@@ -518,7 +518,7 @@ class AudioEngine {
   }
 
   // Play a full chord with natural instrument strumming / striking
-  public playChord(root: string, intervals: number[], octave: number = 3, strum: boolean = true, instrument: InstrumentType = 'guitar') {
+  public playChord(root: string, intervals: number[], octave: number = 3, strum: boolean = true, instrument: InstrumentType = 'guitar', bass?: string) {
     const flatToSharp: Record<string, string> = {
       'DB': 'C#',
       'EB': 'D#',
@@ -537,14 +537,32 @@ class AudioEngine {
     const rootIndex = noteMapList.indexOf(normalizedRoot);
     if (rootIndex === -1) return;
 
-    intervals.forEach((interval, index) => {
-      const semitoneIndex = (rootIndex + interval) % 12;
-      const noteName = noteMapList[semitoneIndex];
-      const noteOctave = octave + Math.floor((rootIndex + interval) / 12);
-      // Guitar has a natural strum delay (32ms per string); piano has subtle human touch (12ms)
-      const delay = strum ? index * (instrument === 'guitar' ? 0.032 : 0.012) : 0;
-      this.playNote(noteName, noteOctave, 2.2, delay, instrument);
-    });
+    if (bass) {
+      const cleanBass = bass.trim().toUpperCase().replace('♭', 'B').replace('♯', '#');
+      const bassMatch = cleanBass.match(/^([A-G][B#]?)/);
+      const baseBass = bassMatch ? bassMatch[1] : cleanBass;
+      const normalizedBass = flatToSharp[baseBass] || baseBass;
+
+      // Play slash bass note at lower octave first
+      this.playNote(normalizedBass, octave - 1, 2.2, 0, instrument);
+
+      intervals.forEach((interval, index) => {
+        const semitoneIndex = (rootIndex + interval) % 12;
+        const noteName = noteMapList[semitoneIndex];
+        const noteOctave = octave + Math.floor((rootIndex + interval) / 12);
+        const delay = strum ? (index + 1) * (instrument === 'guitar' ? 0.032 : 0.012) : 0;
+        this.playNote(noteName, noteOctave, 2.2, delay, instrument);
+      });
+    } else {
+      intervals.forEach((interval, index) => {
+        const semitoneIndex = (rootIndex + interval) % 12;
+        const noteName = noteMapList[semitoneIndex];
+        const noteOctave = octave + Math.floor((rootIndex + interval) / 12);
+        // Guitar has a natural strum delay (32ms per string); piano has subtle human touch (12ms)
+        const delay = strum ? index * (instrument === 'guitar' ? 0.032 : 0.012) : 0;
+        this.playNote(noteName, noteOctave, 2.2, delay, instrument);
+      });
+    }
   }
 
   // Play metronome click
