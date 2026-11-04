@@ -223,15 +223,52 @@ export function getFullChordShapes(
     'C5': [3, 3, 5, 5, 'x', 'x'],
     'E5': [0, 2, 2, 'x', 'x', 'x'],
     'A5': ['x', 0, 2, 2, 'x', 'x'],
+    'C9': ['x', 3, 2, 3, 3, 'x'],
+    'G9': [3, 'x', 3, 2, 0, 1],
+    'A9': ['x', 0, 2, 4, 2, 3],
+    'E9': [0, 2, 0, 1, 0, 2],
+    'D9': ['x', 'x', 0, 2, 1, 0],
+    'Csus2': ['x', 3, 0, 0, 1, 'x'],
+    'Dsus2': ['x', 'x', 0, 2, 3, 0],
+    'Asus2': ['x', 0, 2, 2, 0, 0],
+    'Csus4': ['x', 3, 3, 0, 1, 1],
+    'Dsus4': ['x', 'x', 0, 2, 3, 3],
+    'Esus4': [0, 2, 2, 2, 0, 0],
+    'Asus4': ['x', 0, 2, 2, 3, 0],
+    'Gsus4': [3, 3, 0, 0, 1, 3],
+    'C7sus4': ['x', 3, 3, 3, 1, 1],
+    'D7sus4': ['x', 'x', 0, 2, 1, 3],
+    'A7sus4': ['x', 0, 2, 0, 3, 0],
+    'E7sus4': [0, 2, 0, 2, 0, 0],
+    'Cdim': ['x', 3, 4, 'x', 4, 'x'],
+    'Cdim7': ['x', 3, 4, 2, 4, 'x'],
+    'Cm7b5': ['x', 3, 4, 3, 4, 'x'],
+    'Am7b5': ['x', 0, 1, 0, 1, 'x'],
+    'Em7b5': [0, 1, 0, 0, 3, 0],
+    'Bm7b5': ['x', 2, 3, 2, 3, 'x'],
+    'Caug': ['x', 3, 2, 1, 1, 'x'],
+    'Eaug': [0, 3, 2, 1, 1, 0],
+    'Aaug': ['x', 0, 3, 2, 2, 1],
   };
 
   let suffix = '';
   if (chordType === 'maj9') suffix = 'maj9';
   else if (chordType === 'm9') suffix = 'm9';
+  else if (chordType === 'dom9' || chordType === '9') suffix = '9';
+  else if (chordType === 'dom11' || chordType === '11') suffix = '11';
+  else if (chordType === '7sus4') suffix = '7sus4';
+  else if (chordType === 'sus2') suffix = 'sus2';
+  else if (chordType === 'sus4') suffix = 'sus4';
+  else if (chordType === 'add9') suffix = 'add9';
   else if (chordType === 'maj6' || chordType === '6') suffix = '6';
   else if (chordType === 'm6') suffix = 'm6';
+  else if (chordType === 'dim7') suffix = 'dim7';
+  else if (chordType === 'm7b5') suffix = 'm7b5';
+  else if (chordType === 'dim') suffix = 'dim';
+  else if (chordType === 'aug7') suffix = 'aug7';
   else if (chordType === 'aug') suffix = 'aug';
   else if (chordType === 'power5' || chordType === '5') suffix = '5';
+  else if (chordType === 'mmaj7') suffix = 'mmaj7';
   else if (isM7) suffix = 'maj7';
   else if (isMin7) suffix = 'm7';
   else if (is7) suffix = '7';
@@ -247,7 +284,25 @@ export function getFullChordShapes(
   // 1. E Shape (Root on String 6)
   const eFret = (rootPitch - getChromaticIndex('E') + 12) % 12;
   let s6Frets: (number | 'x')[] = [];
-  if (isMinor) {
+  if (chordType === 'dom9' || chordType === '9') {
+    s6Frets = [eFret, 'x', eFret, eFret + 1, eFret + 2, 'x'];
+  } else if (chordType === 'm9') {
+    s6Frets = [eFret, 'x', eFret, eFret, eFret + 2, 'x'];
+  } else if (chordType === 'maj9') {
+    s6Frets = [eFret, 'x', eFret + 1, eFret + 1, eFret + 2, 'x'];
+  } else if (chordType === 'sus2') {
+    s6Frets = [eFret, eFret + 2, eFret + 4, eFret + 4, eFret, eFret];
+  } else if (chordType === 'sus4') {
+    s6Frets = [eFret, eFret + 2, eFret + 2, eFret + 2, eFret, eFret];
+  } else if (chordType === '7sus4') {
+    s6Frets = [eFret, eFret + 2, eFret, eFret + 2, eFret, eFret];
+  } else if (chordType === 'dim7') {
+    s6Frets = [eFret, 'x', eFret - 1, eFret, eFret - 1, 'x'].map(f => (typeof f === 'number' && f < 0 ? f + 12 : f) as number | 'x');
+  } else if (chordType === 'm7b5') {
+    s6Frets = [eFret, 'x', eFret, eFret, eFret - 1, 'x'].map(f => (typeof f === 'number' && f < 0 ? f + 12 : f) as number | 'x');
+  } else if (chordType === 'aug' || chordType === 'aug7') {
+    s6Frets = [eFret, 'x', eFret + 2, eFret + 1, eFret + 1, 'x'];
+  } else if (isMinor) {
     s6Frets = [eFret, eFret + 2, eFret + 2, eFret, eFret, eFret];
   } else if (is7) {
     s6Frets = [eFret, eFret + 2, eFret, eFret + 1, eFret, eFret];
@@ -269,7 +324,24 @@ export function getFullChordShapes(
   // 2. A Shape (Root on String 5)
   const aFret = (rootPitch - getChromaticIndex('A') + 12) % 12;
   let s5Frets: (number | 'x')[] = [];
-  if (isMinor) {
+  if (chordType === 'dom9' || chordType === '9') {
+    // Classic 9th chord barre (Root on 5th string, e.g. C9: x 3 2 3 3 x)
+    s5Frets = ['x', aFret, aFret - 1, aFret, aFret, 'x'].map(f => (typeof f === 'number' && f < 0 ? f + 12 : f) as number | 'x');
+  } else if (chordType === 'm9') {
+    s5Frets = ['x', aFret, aFret - 1, aFret, aFret, aFret].map(f => (typeof f === 'number' && f < 0 ? f + 12 : f) as number | 'x');
+  } else if (chordType === 'maj9') {
+    s5Frets = ['x', aFret, aFret + 1, aFret + 1, aFret, 'x'];
+  } else if (chordType === 'sus2') {
+    s5Frets = ['x', aFret, aFret + 2, aFret + 2, aFret, aFret];
+  } else if (chordType === 'sus4') {
+    s5Frets = ['x', aFret, aFret + 2, aFret + 2, aFret + 3, aFret];
+  } else if (chordType === '7sus4') {
+    s5Frets = ['x', aFret, aFret + 2, aFret, aFret + 3, aFret];
+  } else if (chordType === 'dim7') {
+    s5Frets = ['x', aFret, aFret + 1, aFret - 1, aFret + 1, 'x'].map(f => (typeof f === 'number' && f < 0 ? f + 12 : f) as number | 'x');
+  } else if (chordType === 'm7b5') {
+    s5Frets = ['x', aFret, aFret + 1, aFret, aFret + 1, 'x'];
+  } else if (isMinor) {
     s5Frets = ['x', aFret, aFret + 2, aFret + 2, aFret + 1, aFret];
   } else if (is7) {
     s5Frets = ['x', aFret, aFret + 2, aFret, aFret + 2, aFret];

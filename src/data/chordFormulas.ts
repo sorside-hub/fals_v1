@@ -57,6 +57,30 @@ export const CHORD_FORMULAS: Record<string, ChordFormula> = {
     feeling: 'RnB, mellow hangat, santai tapi elegan',
     example: 'Dm7 = D - F - A - C'
   },
+  mmaj7: {
+    name: 'Minor Major 7',
+    symbol: 'mmaj7',
+    intervals: [0, 3, 7, 11],
+    formulaNames: '1 - b3 - 5 - 7',
+    feeling: 'Misterius, noir, James Bond vibe, neo-noir jazz',
+    example: 'Cmmaj7 = C - Eb - G - B'
+  },
+  dom9: {
+    name: 'Dominant 9',
+    symbol: '9',
+    intervals: [0, 4, 7, 10, 14],
+    formulaNames: '1 - 3 - 5 - b7 - 9',
+    feeling: 'Funk, soul, bluesy elegan, James Brown groove',
+    example: 'C9 = C - E - G - Bb - D'
+  },
+  dom11: {
+    name: 'Dominant 11',
+    symbol: '11',
+    intervals: [0, 4, 7, 10, 14, 17],
+    formulaNames: '1 - 3 - 5 - b7 - 9 - 11',
+    feeling: 'Jazzy, luas, gospel modern, melayang',
+    example: 'C11 = C - E - G - Bb - D - F'
+  },
   m9: {
     name: 'Minor 9',
     symbol: 'm9',
@@ -72,6 +96,14 @@ export const CHORD_FORMULAS: Record<string, ChordFormula> = {
     formulaNames: '1 - 3 - 5 - 7 - 9',
     feeling: 'Mewah, lapang, R&B modern, dreamy',
     example: 'Cmaj9 = C - E - G - B - D'
+  },
+  '7sus4': {
+    name: '7 Suspended 4',
+    symbol: '7sus4',
+    intervals: [0, 5, 7, 10],
+    formulaNames: '1 - 4 - 5 - b7',
+    feeling: 'Mengambang kuat, tension khas funk/soul, gospel',
+    example: 'C7sus4 = C - F - G - Bb'
   },
   add9: {
     name: 'Add 9',
@@ -97,13 +129,29 @@ export const CHORD_FORMULAS: Record<string, ChordFormula> = {
     feeling: 'Bossa nova, jazz klasik, misterius manis',
     example: 'Am6 = A - C - E - F#'
   },
-  diminished: {
+  dim: {
     name: 'Diminished',
     symbol: 'dim',
     intervals: [0, 3, 6],
     formulaNames: '1 - b3 - b5',
     feeling: 'Horor, dramatis, passing chord jembatan',
     example: 'Bdim = B - D - F'
+  },
+  dim7: {
+    name: 'Diminished 7',
+    symbol: 'dim7',
+    intervals: [0, 3, 6, 9],
+    formulaNames: '1 - b3 - b5 - bb7',
+    feeling: 'Ketegangan penuh, klasik drama, transisi kental',
+    example: 'Bdim7 = B - D - F - Ab'
+  },
+  m7b5: {
+    name: 'Half-Diminished (m7b5)',
+    symbol: 'm7b5',
+    intervals: [0, 3, 6, 10],
+    formulaNames: '1 - b3 - b5 - b7',
+    feeling: 'Melankolis jazz, akor ii dalam minor ii-V-i',
+    example: 'Bm7b5 = B - D - F - A'
   },
   aug: {
     name: 'Augmented',
@@ -112,6 +160,14 @@ export const CHORD_FORMULAS: Record<string, ChordFormula> = {
     formulaNames: '1 - 3 - #5',
     feeling: 'Tegang, melayang, suspenseful transition',
     example: 'Caug = C - E - G#'
+  },
+  aug7: {
+    name: 'Augmented 7',
+    symbol: 'aug7',
+    intervals: [0, 4, 8, 10],
+    formulaNames: '1 - 3 - #5 - b7',
+    feeling: 'Disonan manis, transisi dramatis blues & bebop',
+    example: 'Caug7 = C - E - G# - Bb'
   },
   power5: {
     name: 'Power Chord',

@@ -31,7 +31,9 @@ export function parseHash(hashStr: string): ParsedRoute {
   }
 
   let tab: TabType = 'lyrics';
-  if (rawTab === 'bank' || rawTab === 'amunisi') {
+  if (rawTab === 'lab') {
+    tab = 'lab';
+  } else if (rawTab === 'bank' || rawTab === 'amunisi') {
     tab = 'bank';
   } else {
     tab = 'lyrics';

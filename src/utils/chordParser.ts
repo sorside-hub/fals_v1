@@ -63,6 +63,8 @@ export function parseChordSymbol(symbol: string): ParsedChord {
   let formulaKey = 'major';
   if (suffix === 'm' || suffix === 'min' || suffix === '-') {
     formulaKey = 'minor';
+  } else if (suffix === 'mmaj7' || suffix === 'minmaj7') {
+    formulaKey = 'mmaj7';
   } else if (suffix === 'maj7' || suffix === 'm7+' || suffix === 'major7') {
     formulaKey = 'maj7';
   } else if (suffix === 'm7' || suffix === 'min7' || suffix === '-7') {
@@ -71,6 +73,12 @@ export function parseChordSymbol(symbol: string): ParsedChord {
     formulaKey = 'm9';
   } else if (suffix === 'maj9') {
     formulaKey = 'maj9';
+  } else if (suffix === '9' || suffix === 'dom9') {
+    formulaKey = 'dom9';
+  } else if (suffix === '11' || suffix === 'dom11') {
+    formulaKey = 'dom11';
+  } else if (suffix === '7sus4' || suffix === '7sus') {
+    formulaKey = '7sus4';
   } else if (suffix === '7' || suffix === 'dom7') {
     formulaKey = 'dom7';
   } else if (suffix === 'sus2') {
@@ -83,8 +91,14 @@ export function parseChordSymbol(symbol: string): ParsedChord {
     formulaKey = 'maj6';
   } else if (suffix === 'm6') {
     formulaKey = 'm6';
+  } else if (suffix === 'dim7') {
+    formulaKey = 'dim7';
+  } else if (suffix === 'm7b5' || suffix === 'halfdim') {
+    formulaKey = 'm7b5';
   } else if (suffix === 'dim' || suffix === 'o') {
     formulaKey = 'dim';
+  } else if (suffix === 'aug7' || suffix === '+7') {
+    formulaKey = 'aug7';
   } else if (suffix === 'aug' || suffix === '+') {
     formulaKey = 'aug';
   } else if (suffix === '5') {

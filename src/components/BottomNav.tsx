@@ -1,6 +1,6 @@
 import React from 'react';
 import { TabType } from '../types';
-import { PenLine, Sparkles } from 'lucide-react';
+import { PenLine, Sparkles, Music2 } from 'lucide-react';
 
 interface BottomNavProps {
   currentTab: TabType;
@@ -15,12 +15,13 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 }) => {
   const tabs: { id: TabType; label: string; icon: React.FC<{ className?: string }> }[] = [
     { id: 'lyrics', label: 'Lirik', icon: PenLine },
+    { id: 'lab', label: 'Lab', icon: Music2 },
     { id: 'bank', label: 'Amunisi', icon: Sparkles },
   ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#FAF9F5]/95 backdrop-blur-md border-t border-[#E5E4DE] pb-safe shadow-md">
-      <div className="grid grid-cols-2 h-14 max-w-sm mx-auto items-center px-4">
+      <div className="grid grid-cols-3 h-14 max-w-md mx-auto items-center px-4">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = currentTab === tab.id;

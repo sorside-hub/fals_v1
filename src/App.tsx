@@ -6,6 +6,7 @@ import { LyricEditor } from './components/LyricEditor';
 import { ConceptEditor } from './components/lyrics/ConceptEditor';
 import { AlbumProjectView } from './components/lyrics/AlbumProjectView';
 import { BankBar } from './components/BankBar';
+import { LabView } from './components/lab/LabView';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { HiddenSettingsView } from './components/settings/HiddenSettingsView';
 import { useSongs } from './hooks/useSongs';
@@ -112,6 +113,8 @@ export default function App() {
           navigate('#lyrics');
         }
       }
+    } else if (tab === 'lab') {
+      navigate('#lab');
     } else if (tab === 'bank') {
       if (route.tab === 'bank') {
         // If currently ALREADY in bank tab and in editor: clicking bank tab toggles back to list view
@@ -328,6 +331,13 @@ export default function App() {
                 />
               </div>
             )}
+          </div>
+        )}
+
+        {/* Tab Lab: Kamus Akor, Skala, Progresi */}
+        {route.tab === 'lab' && (
+          <div className="animate-fade-in w-full">
+            <LabView />
           </div>
         )}
 
