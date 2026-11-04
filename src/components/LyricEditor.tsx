@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
-import { DOMParser as PMDOMParser } from '@tiptap/pm/model';
+import { DOMParser as PMDOMParser, DOMSerializer as PMDOMSerializer } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
 import { countSyllablesInLine } from '../utils/syllableCounter';
 import { CHROMATIC_NOTES } from '../utils/musicTheory';
@@ -239,7 +239,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
 
           const slice = selection.content();
           const div = document.createElement('div');
-          div.appendChild(view.serializer.serializeFragment(slice.content));
+          div.appendChild(PMDOMSerializer.fromSchema(view.state.schema).serializeFragment(slice.content));
 
           const cleanText = extractCleanLyricsText(div.innerHTML);
           if (cleanText) {
