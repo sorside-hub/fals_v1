@@ -112,7 +112,7 @@ export const GuitarFretboardDiagram: React.FC<GuitarFretboardDiagramProps> = ({
           </span>
           <div className="min-w-0 flex-1">
             <div className="text-xs sm:text-sm font-bold text-[#1C1917] truncate">
-              {displayName.replace(chordName, '').trim().replace(/^\((.*)\)$/, '$1') || displayName}
+              {displayName}
             </div>
             <div className="text-[10.5px] font-mono text-[#78716C] truncate">
               {currentShape.name || `Bentuk ${selectedShapeIndex + 1}`}

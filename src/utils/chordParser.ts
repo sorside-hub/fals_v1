@@ -155,7 +155,7 @@ export function parseChordSymbol(symbol: string): ParsedChord {
     bass: chromaticBass,
     intervals: formula.intervals,
     notes,
-    displayName: `${clean}${bassLabel}`,
+    displayName: `${formula.name}${bassLabel}`,
     feeling: formula.feeling || 'Harmonis',
     formulaNames: formula.formulaNames || '1 - 3 - 5',
   };

@@ -46,7 +46,7 @@ export const LabDrawerSidebar: React.FC<LabDrawerSidebarProps> = ({
       title: 'Skala & Modus',
       description: 'Eksplorasi nada melodi mayor, minor, pentatonik & modus modal.',
       icon: Music,
-      available: false,
+      available: true,
     },
     {
       id: 'progressions' as LabFeature,

@@ -6,6 +6,7 @@ import { sound } from '../../utils/audioEngine';
 import { RadialNotePicker } from './RadialNotePicker';
 import { GuitarFretboardDiagram } from './GuitarFretboardDiagram';
 import { LabDrawerSidebar, LabFeature } from './LabDrawerSidebar';
+import { ScaleView } from './ScaleView';
 
 // Categories of Chord Extensions / Qualities
 interface ChordTypeCategory {
@@ -106,6 +107,23 @@ export const LabView: React.FC = () => {
   const handlePlayChord = () => {
     sound.playChord(parsedChord.root, parsedChord.intervals, 3, true, 'guitar', parsedChord.bass);
   };
+
+  if (activeFeature === 'scales') {
+    return (
+      <div className="w-full max-w-4xl mx-auto pb-20 animate-fade-in">
+        <ScaleView onOpenSidebar={() => setIsSidebarOpen(true)} />
+        <LabDrawerSidebar
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+          activeFeature={activeFeature}
+          onSelectFeature={(feat) => {
+            setActiveFeature(feat);
+            setIsSidebarOpen(false);
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-4 pb-20 animate-fade-in">
