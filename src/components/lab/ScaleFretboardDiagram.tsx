@@ -399,39 +399,47 @@ export const ScaleFretboardDiagram: React.FC<ScaleFretboardDiagramProps> = ({
       {/* FULLSCREEN ADAPTIVE FULL NECK MODAL OVERLAY (ROTATED 3-COLUMN LAYOUT) */}
       {isFullscreenOpen && (
         <div className="fixed inset-0 z-50 bg-[#1C1917] text-[#FAF9F5] flex flex-row items-center justify-between p-1 sm:p-2 select-none overflow-hidden animate-fade-in">
-          {/* 1. LEFT SIDEBAR: LEGEND & FORMULA (Rotated 90deg facing left) */}
-          <div className="w-10 sm:w-12 h-full flex flex-col items-center justify-around py-6 border-r border-[#383533] shrink-0 bg-[#24211F] text-[10px] font-mono text-[#D6D3D1]">
-            <div className="rotate-90 whitespace-nowrap flex items-center gap-1.5 font-bold">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#FAF9F5] inline-block shadow-2xs"></span>
-              <span className="text-[#FAF9F5]">Root ({rootNote})</span>
+          {/* 1. LEFT SIDEBAR: LEGEND & FORMULA (Rotated 90deg, Compact Wrappers) */}
+          <div className="w-10 sm:w-12 h-full flex flex-col items-center justify-between py-3 border-r border-[#383533] shrink-0 bg-[#24211F] text-[10px] font-mono text-[#D6D3D1]">
+            <div className="h-16 w-full flex items-center justify-center shrink-0">
+              <div className="rotate-90 whitespace-nowrap flex items-center gap-1.5 font-bold">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#FAF9F5] inline-block shadow-2xs"></span>
+                <span className="text-[#FAF9F5]">Root ({rootNote})</span>
+              </div>
             </div>
 
             {selectedScale.characteristicSemitones && (
-              <div className="rotate-90 whitespace-nowrap flex items-center gap-1.5 font-bold">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#D97706] inline-block shadow-2xs"></span>
-                <span className="text-[#D97706]">Blue Note</span>
+              <div className="h-16 w-full flex items-center justify-center shrink-0">
+                <div className="rotate-90 whitespace-nowrap flex items-center gap-1.5 font-bold">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#D97706] inline-block shadow-2xs"></span>
+                  <span className="text-[#D97706]">Blue Note</span>
+                </div>
               </div>
             )}
 
-            <div className="rotate-90 whitespace-nowrap flex items-center gap-1.5 font-medium">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#383533] border border-[#57534E] inline-block shadow-2xs"></span>
-              <span className="text-[#A8A29E]">Nada Skala</span>
+            <div className="h-16 w-full flex items-center justify-center shrink-0">
+              <div className="rotate-90 whitespace-nowrap flex items-center gap-1.5 font-medium">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#383533] border border-[#57534E] inline-block shadow-2xs"></span>
+                <span className="text-[#A8A29E]">Nada Skala</span>
+              </div>
             </div>
 
-            <div className="rotate-90 whitespace-nowrap text-[9px] text-[#A8A29E] max-w-[140px] truncate">
-              {selectedScale.formulaNames}
+            <div className="h-20 w-full flex items-center justify-center shrink-0 mb-1">
+              <div className="rotate-90 whitespace-nowrap text-[8.5px] font-mono text-[#A8A29E] max-w-[110px] truncate bg-[#1C1917] px-2 py-0.5 rounded border border-[#383533]">
+                {selectedScale.formulaNames}
+              </div>
             </div>
           </div>
 
-          {/* 2. CENTER CANVAS: 0-15 FRETBOARD (Stretching vertical height, equalized nut circles, equal Fret 1 box) */}
+          {/* 2. CENTER CANVAS: 0-15 FRETBOARD (Stretching vertical height, spaced nut circles, equal Fret 1 box) */}
           <div className="flex-1 h-full min-w-0 flex items-center justify-center p-0 overflow-hidden my-auto">
             <svg
               viewBox="0 0 320 735"
               className="w-full h-full max-h-[99vh] drop-shadow-md overflow-visible"
               preserveAspectRatio="xMidYMid meet"
             >
-              {/* Nut Line at Fret 0 Top (Placed above baseline y=28 so Fret 1 inner box height is exactly equal) */}
-              <rect x="35" y="22" width="230" height="6" fill="#FAF9F5" rx="1.5" />
+              {/* Nut Line at Fret 0 Top (Placed at y=28 to y=34 so nut circles have clean breathing room above) */}
+              <rect x="35" y="28" width="230" height="6" fill="#FAF9F5" rx="1.5" />
 
               {/* 6 Vertical Strings (String 6 on left x=35, String 1 on right x=265) */}
               {[6, 5, 4, 3, 2, 1].map((strNum) => {
@@ -442,17 +450,17 @@ export const ScaleFretboardDiagram: React.FC<ScaleFretboardDiagramProps> = ({
                   <g key={`fn-v-str-${strNum}`}>
                     <line
                       x1={sx}
-                      y1="28"
+                      y1="34"
                       x2={sx}
-                      y2="725"
+                      y2="724"
                       stroke="#A8A29E"
                       strokeWidth={strokeW}
                     />
                     {/* Open Nut Note at Top (Directly showing E A D G B E, Rotated 90deg) */}
                     <text
                       x={sx}
-                      y="11"
-                      transform={`rotate(90 ${sx} 11)`}
+                      y="13"
+                      transform={`rotate(90 ${sx} 13)`}
                       textAnchor="middle"
                       dominantBaseline="central"
                       className="text-[11px] font-mono font-black fill-[#FAF9F5]"
@@ -463,11 +471,11 @@ export const ScaleFretboardDiagram: React.FC<ScaleFretboardDiagramProps> = ({
                 );
               })}
 
-              {/* 15 Horizontal Frets (Stretching height ~46.46px per fret) */}
+              {/* 15 Horizontal Frets (Stretching height ~46px per fret) */}
               {Array.from({ length: 15 }).map((_, fIdx) => {
                 const fretNum = fIdx + 1;
-                const fy = 28 + fretNum * 46.46;
-                const cy = 28 + (fretNum - 0.5) * 46.46;
+                const fy = 34 + fretNum * 46;
+                const cy = 34 + (fretNum - 0.5) * 46;
                 const isSingleMarker = [3, 5, 7, 9, 15].includes(fretNum);
                 const isDoubleMarker = fretNum === 12;
 
@@ -510,7 +518,7 @@ export const ScaleFretboardDiagram: React.FC<ScaleFretboardDiagramProps> = ({
               {/* Active Note Badges (Nut & fret note circles have equal radius r=11, Rotated 90deg) */}
               {fullPositions.map((pos) => {
                 const sx = 35 + (6 - pos.stringNum) * 46;
-                const cy = pos.fret === 0 ? 11 : 28 + (pos.fret - 0.5) * 46.46;
+                const cy = pos.fret === 0 ? 13 : 34 + (pos.fret - 0.5) * 46;
                 const isPlaying = activeNoteKey === `${pos.stringNum}-${pos.fret}`;
                 const label = displayLabelMode === 'note' ? pos.note : pos.degree;
 
@@ -568,60 +576,68 @@ export const ScaleFretboardDiagram: React.FC<ScaleFretboardDiagramProps> = ({
             </svg>
           </div>
 
-          {/* 3. RIGHT SIDEBAR: CONTROLS & TITLE (Rotated 90deg facing left) */}
-          <div className="w-12 sm:w-14 h-full flex flex-col items-center justify-between py-4 border-l border-[#383533] shrink-0 bg-[#292524]">
-            {/* Close Button X */}
-            <button
-              type="button"
-              onClick={() => setIsFullscreenOpen(false)}
-              className="w-8 h-8 rounded-xl bg-[#383533] hover:bg-[#57534E] flex items-center justify-center text-[#FAF9F5] border border-[#57534E] transition active:scale-95 cursor-pointer rotate-90 shrink-0"
-              title="Tutup Mode Full Neck"
-            >
-              <X className="w-4 h-4" />
-            </button>
+          {/* 3. RIGHT SIDEBAR: CONTROLS & TITLE (Perfect Rotated Layout with Exact Bounding Boxes) */}
+          <div className="w-12 sm:w-14 h-full flex flex-col items-center justify-between py-2 border-l border-[#383533] shrink-0 bg-[#292524]">
+            {/* 1. Tombol X (Close Button) */}
+            <div className="h-10 w-full flex items-center justify-center shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsFullscreenOpen(false)}
+                className="w-8 h-8 rounded-xl bg-[#383533] hover:bg-[#57534E] flex items-center justify-center text-[#FAF9F5] border border-[#57534E] transition active:scale-95 cursor-pointer rotate-90"
+                title="Tutup Mode Full Neck"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
-            {/* Play Audio Button */}
-            <button
-              type="button"
-              onClick={() => handlePlayScaleSequence(fullPositions)}
-              className="px-3 py-2 bg-[#D97706] hover:bg-[#B45309] text-[#FAF9F5] rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-2xs rotate-90 whitespace-nowrap shrink-0"
-              title="Bunyikan Urutan Skala Naik"
-            >
-              <Volume2 className="w-3.5 h-3.5" />
-              <span>Bunyikan</span>
-            </button>
-
-            {/* Display Mode Switcher (Nada / Rumus) */}
-            <div className="flex flex-col items-center gap-1 bg-[#1C1917] border border-[#44403C] p-1 rounded-xl text-[10px] font-mono font-bold rotate-90 shrink-0">
-              <div className="flex items-center gap-0.5">
-                <button
-                  type="button"
-                  onClick={() => setDisplayLabelMode('note')}
-                  className={`px-2 py-1 rounded-lg transition cursor-pointer ${
-                    displayLabelMode === 'note'
-                      ? 'bg-[#FAF9F5] text-[#1C1917]'
-                      : 'text-[#A8A29E] hover:text-[#FAF9F5]'
-                  }`}
-                >
-                  Nada
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDisplayLabelMode('degree')}
-                  className={`px-2 py-1 rounded-lg transition cursor-pointer ${
-                    displayLabelMode === 'degree'
-                      ? 'bg-[#FAF9F5] text-[#1C1917]'
-                      : 'text-[#A8A29E] hover:text-[#FAF9F5]'
-                  }`}
-                >
-                  Rumus
-                </button>
+            {/* 2. Nama Skala Badge (Rotated width ~130px -> Wrapper h-32) */}
+            <div className="h-32 w-full flex items-center justify-center shrink-0">
+              <div className="rotate-90 whitespace-nowrap px-3 py-1 bg-[#FAF9F5] text-[#1C1917] rounded-xl font-mono font-black text-xs shadow-xs">
+                {rootNote} {selectedScale.name}
               </div>
             </div>
 
-            {/* Title Badge */}
-            <div className="rotate-90 whitespace-nowrap px-3 py-1.5 bg-[#FAF9F5] text-[#1C1917] rounded-xl font-mono font-black text-xs shadow-xs shrink-0">
-              {rootNote} {selectedScale.name}
+            {/* 3. Tab Rumus / Nada (Rotated width ~90px -> Wrapper h-24) */}
+            <div className="h-24 w-full flex items-center justify-center shrink-0">
+              <div className="flex flex-col items-center bg-[#1C1917] border border-[#44403C] p-0.5 rounded-xl text-[10px] font-mono font-bold rotate-90">
+                <div className="flex items-center gap-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setDisplayLabelMode('note')}
+                    className={`px-2 py-0.5 rounded-lg transition cursor-pointer ${
+                      displayLabelMode === 'note'
+                        ? 'bg-[#FAF9F5] text-[#1C1917]'
+                        : 'text-[#A8A29E] hover:text-[#FAF9F5]'
+                    }`}
+                  >
+                    Nada
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDisplayLabelMode('degree')}
+                    className={`px-2 py-0.5 rounded-lg transition cursor-pointer ${
+                      displayLabelMode === 'degree'
+                        ? 'bg-[#FAF9F5] text-[#1C1917]'
+                        : 'text-[#A8A29E] hover:text-[#FAF9F5]'
+                    }`}
+                  >
+                    Rumus
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* 4. Tombol Mainkan (Rotated width ~90px -> Wrapper h-24) */}
+            <div className="h-24 w-full flex items-center justify-center shrink-0">
+              <button
+                type="button"
+                onClick={() => handlePlayScaleSequence(fullPositions)}
+                className="px-3 py-1.5 bg-[#D97706] hover:bg-[#B45309] text-[#FAF9F5] rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-2xs rotate-90 whitespace-nowrap"
+                title="Mainkan Urutan Skala Naik"
+              >
+                <Volume2 className="w-3.5 h-3.5" />
+                <span>Mainkan</span>
+              </button>
             </div>
           </div>
         </div>
