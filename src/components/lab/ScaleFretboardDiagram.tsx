@@ -107,6 +107,7 @@ export const ScaleFretboardDiagram: React.FC<ScaleFretboardDiagramProps> = ({
   const {
     minFret: highlightMinFret,
     maxFret: highlightMaxFret,
+    positions: highlightPatternPositions,
   } = getScalePatternPositions(
     rootNote,
     selectedScale.intervals,
@@ -117,6 +118,13 @@ export const ScaleFretboardDiagram: React.FC<ScaleFretboardDiagramProps> = ({
   const focusBoxTop = highlightMinFret <= 0 ? 4 : 34 + (highlightMinFret - 1) * 46 + 4;
   const focusBoxBottom = 34 + Math.min(15, highlightMaxFret) * 46 - 4;
   const focusBoxHeight = Math.max(46, focusBoxBottom - focusBoxTop);
+
+  // Note keys belonging to the currently highlighted pattern for Full Neck dimming/ghosting
+  const activePatternNoteKeys = new Set(
+    highlightPatternPositions
+      .filter((p) => p.fret <= 15 && p.fret >= 0)
+      .map((p) => `${p.stringNum}-${p.fret}`)
+  );
 
   interface SequencerNotePosition extends ScaleNotePosition {
     patternIndex?: number;
@@ -571,19 +579,19 @@ export const ScaleFretboardDiagram: React.FC<ScaleFretboardDiagramProps> = ({
             {/* Active Scale Note Circles */}
             {boxPositions.map((pos) => {
               const sx = getStringX(pos.stringNum);
-              const isPlaying = activeNoteKey === `${pos.stringNum}-${pos.fret}`;
+              const isNoteSounding = activeNoteKey === `${pos.stringNum}-${pos.fret}`;
               const label = displayLabelMode === 'note' ? pos.note : pos.degree;
 
-              const fill = isPlaying
-                ? '#D97706'
+              const fill = isNoteSounding
+                ? '#10B981'
                 : pos.role === 'root'
                 ? '#1C1917'
                 : pos.role === 'characteristic'
                 ? '#D97706'
                 : '#FAF9F5';
 
-              const stroke = isPlaying
-                ? '#D97706'
+              const stroke = isNoteSounding
+                ? '#059669'
                 : pos.role === 'root'
                 ? '#1C1917'
                 : pos.role === 'characteristic'
@@ -591,7 +599,7 @@ export const ScaleFretboardDiagram: React.FC<ScaleFretboardDiagramProps> = ({
                 : '#A8A29E';
 
               const textColor =
-                isPlaying || pos.role === 'root' || pos.role === 'characteristic'
+                isNoteSounding || pos.role === 'root' || pos.role === 'characteristic'
                   ? '#FAF9F5'
                   : '#1C1917';
 
@@ -960,19 +968,32 @@ export const ScaleFretboardDiagram: React.FC<ScaleFretboardDiagramProps> = ({
               {fullPositions.map((pos) => {
                 const sx = 35 + (6 - pos.stringNum) * 46;
                 const cy = pos.fret === 0 ? 13 : 34 + (pos.fret - 0.5) * 46;
-                const isPlaying = activeNoteKey === `${pos.stringNum}-${pos.fret}`;
+                const posKey = `${pos.stringNum}-${pos.fret}`;
+                const isNoteSounding = activeNoteKey === posKey;
                 const label = displayLabelMode === 'note' ? pos.note : pos.degree;
 
-                const fill = isPlaying
-                  ? '#D97706'
+                // Dimming/ghosting effect:
+                // ONLY when playback is active (isPlaying === true):
+                // Notes belonging to active pattern are 100% opacity (1.0).
+                // Notes outside active pattern are ghosted to 15% opacity (0.15).
+                // When NOT playing (idle mode): ALL notes are 100% opacity (1.0).
+                const isNoteInActivePattern = activePatternNoteKeys.has(posKey);
+                const noteOpacity = isPlaying
+                  ? isNoteInActivePattern
+                    ? 1.0
+                    : 0.15
+                  : 1.0;
+
+                const fill = isNoteSounding
+                  ? '#10B981'
                   : pos.role === 'root'
                   ? '#FAF9F5'
                   : pos.role === 'characteristic'
                   ? '#D97706'
                   : '#383533';
 
-                const stroke = isPlaying
-                  ? '#D97706'
+                const stroke = isNoteSounding
+                  ? '#059669'
                   : pos.role === 'root'
                   ? '#FAF9F5'
                   : pos.role === 'characteristic'
@@ -982,14 +1003,16 @@ export const ScaleFretboardDiagram: React.FC<ScaleFretboardDiagramProps> = ({
                 const textColor =
                   pos.role === 'root'
                     ? '#1C1917'
-                    : isPlaying || pos.role === 'characteristic'
+                    : isNoteSounding || pos.role === 'characteristic'
                     ? '#FAF9F5'
                     : '#E5E4DE';
 
                 return (
                   <g
                     key={`fn-v-note-${pos.stringNum}-${pos.fret}`}
-                    className="cursor-pointer active:scale-95 transition-transform"
+                    className="cursor-pointer active:scale-95 transition-all duration-300"
+                    opacity={noteOpacity}
+                    style={{ opacity: noteOpacity }}
                     onClick={() => handlePlayNote(pos)}
                   >
                     <circle

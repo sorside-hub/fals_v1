@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Menu, ChevronDown, BookOpen } from 'lucide-react';
+import { Menu, ChevronDown, BookOpen, Disc } from 'lucide-react';
 import { parseChordSymbol } from '../../utils/chordParser';
 import { getFullChordShapes, ChordShapeVoicing } from '../../utils/guitarChordVoicings';
 import { sound } from '../../utils/audioEngine';
@@ -7,6 +7,7 @@ import { RadialNotePicker } from './RadialNotePicker';
 import { GuitarFretboardDiagram } from './GuitarFretboardDiagram';
 import { LabDrawerSidebar, LabFeature } from './LabDrawerSidebar';
 import { ScaleView } from './ScaleView';
+import { CustomDrumBuilderView } from './CustomDrumBuilderView';
 
 // Categories of Chord Extensions / Qualities
 interface ChordTypeCategory {
@@ -112,6 +113,41 @@ export const LabView: React.FC = () => {
     return (
       <div className="w-full max-w-4xl mx-auto pb-20 animate-fade-in">
         <ScaleView onOpenSidebar={() => setIsSidebarOpen(true)} />
+        <LabDrawerSidebar
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+          activeFeature={activeFeature}
+          onSelectFeature={(feat) => {
+            setActiveFeature(feat);
+            setIsSidebarOpen(false);
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (activeFeature === 'backing-track') {
+    return (
+      <div className="w-full max-w-4xl mx-auto space-y-4 pb-20 animate-fade-in">
+        {/* Header Tab Lab */}
+        <div className="flex items-center justify-between p-3 sm:p-4 bg-[#FFFFFF] border border-[#E5E4DE] rounded-2xl shadow-2xs">
+          <div className="flex items-center gap-2">
+            <Disc className="w-4 h-4 text-[#1C1917]" />
+            <span className="text-base font-bold text-[#1C1917] tracking-tight">Drum Sequencer Builder</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsSidebarOpen(true)}
+            className="w-8 h-8 flex items-center justify-center bg-[#FFFFFF] hover:bg-[#F5F4EE] border border-[#E5E4DE] rounded-lg transition cursor-pointer shadow-2xs text-[#1C1917] shrink-0 active:scale-95"
+            title="Buka Menu Laboratorium"
+          >
+            <Menu className="w-4 h-4" />
+          </button>
+        </div>
+
+        <CustomDrumBuilderView />
+
         <LabDrawerSidebar
           isOpen={isSidebarOpen}
           onClose={() => setIsSidebarOpen(false)}

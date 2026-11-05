@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
-import { X, BookOpen, Music, GitBranch, Sparkles } from 'lucide-react';
+import { X, BookOpen, Music, GitBranch, Sparkles, Disc } from 'lucide-react';
 
-export type LabFeature = 'chords' | 'scales' | 'progressions';
+export type LabFeature = 'chords' | 'scales' | 'progressions' | 'backing-track';
 
 interface LabDrawerSidebarProps {
   isOpen: boolean;
@@ -54,6 +54,13 @@ export const LabDrawerSidebar: React.FC<LabDrawerSidebarProps> = ({
       description: 'Rangkai progresi akor, dengarkan loop tempo, dan kirim ke lirik.',
       icon: GitBranch,
       available: false,
+    },
+    {
+      id: 'backing-track' as LabFeature,
+      title: 'Drum Sequencer Builder',
+      description: 'Buat pola drum 8 bar kustom sendiri, pilih sound kit, atur BPM, dan simpan.',
+      icon: Disc,
+      available: true,
     },
   ];
 

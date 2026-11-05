@@ -13,6 +13,7 @@ import { useSongs } from './hooks/useSongs';
 import { useBarBank } from './hooks/useBarBank';
 import { useAppNavigation } from './hooks/useAppNavigation';
 import { useVirtualKeyboard } from './hooks/useVirtualKeyboard';
+import { FloatingBackingTrackWidget } from './components/common/FloatingBackingTrackWidget';
 
 export default function App() {
   // Native History, Hash Routing, and Scroll Retention Engine
@@ -376,6 +377,9 @@ export default function App() {
           bankBarCount={barItems.length}
         />
       </div>
+
+      {/* Global Floating Backing Track Player & Setup Widget */}
+      <FloatingBackingTrackWidget />
     </div>
   );
 }
