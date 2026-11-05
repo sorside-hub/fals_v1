@@ -85,6 +85,9 @@ export const ScaleFretboardDiagram: React.FC<ScaleFretboardDiagramProps> = ({
 
   const getStringX = (stringNum: number) => padX + (6 - stringNum) * stringSpacing;
 
+  // State for Full Neck layout orientation forced override in modal ('auto' | 'vertical' | 'horizontal')
+  const [modalOrientation, setModalOrientation] = useState<'auto' | 'vertical' | 'horizontal'>('auto');
+
   return (
     <>
       {/* NORMAL CARD CONTAINER (Standard Page Flow) */}
@@ -146,7 +149,7 @@ export const ScaleFretboardDiagram: React.FC<ScaleFretboardDiagramProps> = ({
                   type="button"
                   onClick={() => setIsFullscreenOpen(true)}
                   className="px-2.5 py-1 rounded-lg flex items-center gap-1 text-[#D97706] hover:bg-[#FFFBEB] font-extrabold transition cursor-pointer"
-                  title="Buka Mode Full Neck Rotasi Layar Penuh"
+                  title="Buka Mode Full Neck Layar Penuh"
                 >
                   <Maximize2 className="w-3 h-3" />
                   <span>Full Neck</span>
@@ -273,10 +276,6 @@ export const ScaleFretboardDiagram: React.FC<ScaleFretboardDiagramProps> = ({
               const isPlaying = activeNoteKey === `${pos.stringNum}-${pos.fret}`;
               const label = displayLabelMode === 'note' ? pos.note : pos.degree;
 
-              // Color distinctions:
-              // Root note: Solid Black (#1C1917)
-              // Blue note: Vibrant Amber (#D97706)
-              // Normal note: Soft Light Cream (#FAF9F5) with dark text & gray border
               const fill = isPlaying
                 ? '#D97706'
                 : pos.role === 'root'
@@ -318,7 +317,7 @@ export const ScaleFretboardDiagram: React.FC<ScaleFretboardDiagramProps> = ({
                       x={sx}
                       y={padY - 13}
                       textAnchor="middle"
-                      className={`text-[8px] font-mono font-black pointer-events-none fill-[${textColor}]`}
+                      className="text-[8px] font-mono font-black pointer-events-none"
                       fill={textColor}
                     >
                       {label}
@@ -397,27 +396,208 @@ export const ScaleFretboardDiagram: React.FC<ScaleFretboardDiagramProps> = ({
         </div>
       </div>
 
-      {/* FULLSCREEN LANDSCAPE FULL NECK MODAL OVERLAY */}
+      {/* FULLSCREEN ADAPTIVE FULL NECK MODAL OVERLAY (ROTATED 3-COLUMN LAYOUT) */}
       {isFullscreenOpen && (
-        <div className="fixed inset-0 z-50 bg-[#1C1917]/95 backdrop-blur-md flex flex-col p-3 sm:p-5 select-none animate-fade-in text-[#FAF9F5]">
-          {/* Top Bar: Controls & Close Button */}
-          <div className="flex items-center justify-between border-b border-[#44403C] pb-3 shrink-0 gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="px-2.5 py-1 bg-[#FAF9F5] text-[#1C1917] rounded-xl font-mono font-black text-xs sm:text-sm shrink-0">
-                {rootNote} {selectedScale.name}
-              </span>
-              <span className="text-[11px] font-mono text-[#D6D3D1] truncate hidden sm:inline">
-                {selectedScale.formulaNames}
-              </span>
+        <div className="fixed inset-0 z-50 bg-[#1C1917] text-[#FAF9F5] flex flex-row items-center justify-between p-1 sm:p-2 select-none overflow-hidden animate-fade-in">
+          {/* 1. LEFT SIDEBAR: LEGEND & FORMULA (Rotated 90deg facing left) */}
+          <div className="w-10 sm:w-12 h-full flex flex-col items-center justify-around py-6 border-r border-[#383533] shrink-0 bg-[#24211F] text-[10px] font-mono text-[#D6D3D1]">
+            <div className="rotate-90 whitespace-nowrap flex items-center gap-1.5 font-bold">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#FAF9F5] inline-block shadow-2xs"></span>
+              <span className="text-[#FAF9F5]">Root ({rootNote})</span>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-              {/* Display Label Mode Switcher */}
-              <div className="flex items-center bg-[#292524] border border-[#44403C] p-0.5 rounded-xl text-[10.5px] font-mono font-bold">
+            {selectedScale.characteristicSemitones && (
+              <div className="rotate-90 whitespace-nowrap flex items-center gap-1.5 font-bold">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#D97706] inline-block shadow-2xs"></span>
+                <span className="text-[#D97706]">Blue Note</span>
+              </div>
+            )}
+
+            <div className="rotate-90 whitespace-nowrap flex items-center gap-1.5 font-medium">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#383533] border border-[#57534E] inline-block shadow-2xs"></span>
+              <span className="text-[#A8A29E]">Nada Skala</span>
+            </div>
+
+            <div className="rotate-90 whitespace-nowrap text-[9px] text-[#A8A29E] max-w-[140px] truncate">
+              {selectedScale.formulaNames}
+            </div>
+          </div>
+
+          {/* 2. CENTER CANVAS: 0-15 FRETBOARD (Stretching vertical height, equalized nut circles, equal Fret 1 box) */}
+          <div className="flex-1 h-full min-w-0 flex items-center justify-center p-0 overflow-hidden my-auto">
+            <svg
+              viewBox="0 0 320 735"
+              className="w-full h-full max-h-[99vh] drop-shadow-md overflow-visible"
+              preserveAspectRatio="xMidYMid meet"
+            >
+              {/* Nut Line at Fret 0 Top (Placed above baseline y=28 so Fret 1 inner box height is exactly equal) */}
+              <rect x="35" y="22" width="230" height="6" fill="#FAF9F5" rx="1.5" />
+
+              {/* 6 Vertical Strings (String 6 on left x=35, String 1 on right x=265) */}
+              {[6, 5, 4, 3, 2, 1].map((strNum) => {
+                const sx = 35 + (6 - strNum) * 46;
+                const strokeW = strNum >= 5 ? 2.8 : strNum >= 3 ? 2.0 : 1.4;
+
+                return (
+                  <g key={`fn-v-str-${strNum}`}>
+                    <line
+                      x1={sx}
+                      y1="28"
+                      x2={sx}
+                      y2="725"
+                      stroke="#A8A29E"
+                      strokeWidth={strokeW}
+                    />
+                    {/* Open Nut Note at Top (Directly showing E A D G B E, Rotated 90deg) */}
+                    <text
+                      x={sx}
+                      y="11"
+                      transform={`rotate(90 ${sx} 11)`}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      className="text-[11px] font-mono font-black fill-[#FAF9F5]"
+                    >
+                      {['E', 'A', 'D', 'G', 'B', 'E'][6 - strNum]}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* 15 Horizontal Frets (Stretching height ~46.46px per fret) */}
+              {Array.from({ length: 15 }).map((_, fIdx) => {
+                const fretNum = fIdx + 1;
+                const fy = 28 + fretNum * 46.46;
+                const cy = 28 + (fretNum - 0.5) * 46.46;
+                const isSingleMarker = [3, 5, 7, 9, 15].includes(fretNum);
+                const isDoubleMarker = fretNum === 12;
+
+                return (
+                  <g key={`fn-v-fret-${fretNum}`}>
+                    <line
+                      x1="35"
+                      y1={fy}
+                      x2="265"
+                      y2={fy}
+                      stroke="#57534E"
+                      strokeWidth="1.5"
+                    />
+                    {/* Fret Number (Positioned on top side x=285 when rotated, Rotated 90deg) */}
+                    <text
+                      x="285"
+                      y={cy}
+                      transform={`rotate(90 285 ${cy})`}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      className="text-[11px] font-mono font-black fill-[#A8A29E]"
+                    >
+                      {fretNum}
+                    </text>
+
+                    {/* Inlay Dots */}
+                    {isSingleMarker && (
+                      <circle cx="150" cy={cy} r="4" fill="#A8A29E" opacity="0.35" />
+                    )}
+                    {isDoubleMarker && (
+                      <>
+                        <circle cx="104" cy={cy} r="4" fill="#A8A29E" opacity="0.35" />
+                        <circle cx="196" cy={cy} r="4" fill="#A8A29E" opacity="0.35" />
+                      </>
+                    )}
+                  </g>
+                );
+              })}
+
+              {/* Active Note Badges (Nut & fret note circles have equal radius r=11, Rotated 90deg) */}
+              {fullPositions.map((pos) => {
+                const sx = 35 + (6 - pos.stringNum) * 46;
+                const cy = pos.fret === 0 ? 11 : 28 + (pos.fret - 0.5) * 46.46;
+                const isPlaying = activeNoteKey === `${pos.stringNum}-${pos.fret}`;
+                const label = displayLabelMode === 'note' ? pos.note : pos.degree;
+
+                const fill = isPlaying
+                  ? '#D97706'
+                  : pos.role === 'root'
+                  ? '#FAF9F5'
+                  : pos.role === 'characteristic'
+                  ? '#D97706'
+                  : '#383533';
+
+                const stroke = isPlaying
+                  ? '#D97706'
+                  : pos.role === 'root'
+                  ? '#FAF9F5'
+                  : pos.role === 'characteristic'
+                  ? '#D97706'
+                  : '#57534E';
+
+                const textColor =
+                  pos.role === 'root'
+                    ? '#1C1917'
+                    : isPlaying || pos.role === 'characteristic'
+                    ? '#FAF9F5'
+                    : '#E5E4DE';
+
+                return (
+                  <g
+                    key={`fn-v-note-${pos.stringNum}-${pos.fret}`}
+                    className="cursor-pointer active:scale-95 transition-transform"
+                    onClick={() => handlePlayNote(pos)}
+                  >
+                    <circle
+                      cx={sx}
+                      cy={cy}
+                      r={11}
+                      fill={fill}
+                      stroke={stroke}
+                      strokeWidth="1.8"
+                    />
+                    <text
+                      x={sx}
+                      y={cy}
+                      transform={`rotate(90 ${sx} ${cy})`}
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      className="text-[9.5px] font-mono font-black pointer-events-none"
+                      fill={textColor}
+                    >
+                      {label}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+
+          {/* 3. RIGHT SIDEBAR: CONTROLS & TITLE (Rotated 90deg facing left) */}
+          <div className="w-12 sm:w-14 h-full flex flex-col items-center justify-between py-4 border-l border-[#383533] shrink-0 bg-[#292524]">
+            {/* Close Button X */}
+            <button
+              type="button"
+              onClick={() => setIsFullscreenOpen(false)}
+              className="w-8 h-8 rounded-xl bg-[#383533] hover:bg-[#57534E] flex items-center justify-center text-[#FAF9F5] border border-[#57534E] transition active:scale-95 cursor-pointer rotate-90 shrink-0"
+              title="Tutup Mode Full Neck"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Play Audio Button */}
+            <button
+              type="button"
+              onClick={() => handlePlayScaleSequence(fullPositions)}
+              className="px-3 py-2 bg-[#D97706] hover:bg-[#B45309] text-[#FAF9F5] rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-2xs rotate-90 whitespace-nowrap shrink-0"
+              title="Bunyikan Urutan Skala Naik"
+            >
+              <Volume2 className="w-3.5 h-3.5" />
+              <span>Bunyikan</span>
+            </button>
+
+            {/* Display Mode Switcher (Nada / Rumus) */}
+            <div className="flex flex-col items-center gap-1 bg-[#1C1917] border border-[#44403C] p-1 rounded-xl text-[10px] font-mono font-bold rotate-90 shrink-0">
+              <div className="flex items-center gap-0.5">
                 <button
                   type="button"
                   onClick={() => setDisplayLabelMode('note')}
-                  className={`px-2 py-1 rounded-lg transition ${
+                  className={`px-2 py-1 rounded-lg transition cursor-pointer ${
                     displayLabelMode === 'note'
                       ? 'bg-[#FAF9F5] text-[#1C1917]'
                       : 'text-[#A8A29E] hover:text-[#FAF9F5]'
@@ -428,7 +608,7 @@ export const ScaleFretboardDiagram: React.FC<ScaleFretboardDiagramProps> = ({
                 <button
                   type="button"
                   onClick={() => setDisplayLabelMode('degree')}
-                  className={`px-2 py-1 rounded-lg transition ${
+                  className={`px-2 py-1 rounded-lg transition cursor-pointer ${
                     displayLabelMode === 'degree'
                       ? 'bg-[#FAF9F5] text-[#1C1917]'
                       : 'text-[#A8A29E] hover:text-[#FAF9F5]'
@@ -437,170 +617,11 @@ export const ScaleFretboardDiagram: React.FC<ScaleFretboardDiagramProps> = ({
                   Rumus
                 </button>
               </div>
-
-              {/* Strum Scale Audio Button */}
-              <button
-                type="button"
-                onClick={() => handlePlayScaleSequence(fullPositions)}
-                className="px-3 py-1.5 bg-[#D97706] hover:bg-[#B45309] text-[#FAF9F5] rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-xs"
-                title="Bunyikan Urutan Skala Naik"
-              >
-                <Volume2 className="w-3.5 h-3.5" />
-                <span>Bunyikan</span>
-              </button>
-
-              {/* Close Button */}
-              <button
-                type="button"
-                onClick={() => setIsFullscreenOpen(false)}
-                className="w-8 h-8 rounded-xl bg-[#292524] hover:bg-[#44403C] flex items-center justify-center text-[#FAF9F5] border border-[#57534E] transition active:scale-95 cursor-pointer"
-                title="Tutup Mode Full Neck"
-              >
-                <X className="w-4 h-4" />
-              </button>
             </div>
-          </div>
 
-          {/* Hint Bar for Mobile Landscape Rotation */}
-          <div className="py-1 text-center text-[10.5px] font-mono text-[#A8A29E] flex items-center justify-center gap-1.5 shrink-0">
-            <RotateCcw className="w-3 h-3" />
-            <span>Tips: Miringkan HP (Mode Landscape) untuk tampilan peta nada Full Neck yang maksimal!</span>
-          </div>
-
-          {/* Full Neck Horizontal SVG Canvas (Scrollable) */}
-          <div className="flex-1 overflow-x-auto overflow-y-auto flex items-center justify-start p-2">
-            <div className="min-w-[840px] w-full p-4 bg-[#292524] border border-[#44403C] rounded-2xl flex items-center justify-center shadow-2xl">
-              <svg
-                viewBox="0 0 820 180"
-                className="w-full h-auto overflow-visible"
-              >
-                {/* Nut Line at Fret 0 */}
-                <rect x="40" y="25" width="5" height="120" fill="#FAF9F5" rx="1.5" />
-
-                {/* 6 Horizontal Strings (String 1 on top, String 6 on bottom) */}
-                {[1, 2, 3, 4, 5, 6].map((strNum) => {
-                  const sy = 25 + (strNum - 1) * 24;
-                  const strokeW = strNum >= 5 ? 2.5 : strNum >= 3 ? 1.8 : 1.2;
-
-                  return (
-                    <g key={`fn-str-${strNum}`}>
-                      <line
-                        x1="40"
-                        y1={sy}
-                        x2="800"
-                        y2={sy}
-                        stroke="#A8A29E"
-                        strokeWidth={strokeW}
-                      />
-                      <text
-                        x="20"
-                        y={sy + 3.5}
-                        textAnchor="middle"
-                        className="text-[11px] font-mono font-black fill-[#D6D3D1]"
-                      >
-                        {strNum}
-                      </text>
-                    </g>
-                  );
-                })}
-
-                {/* 15 Vertical Frets */}
-                {Array.from({ length: 15 }).map((_, fIdx) => {
-                  const fx = 40 + (fIdx + 1) * 50;
-                  const fretNum = fIdx + 1;
-                  const isSingleMarker = [3, 5, 7, 9, 15].includes(fretNum);
-                  const isDoubleMarker = fretNum === 12;
-
-                  return (
-                    <g key={`fn-fret-${fretNum}`}>
-                      <line
-                        x1={fx}
-                        y1="25"
-                        x2={fx}
-                        y2="145"
-                        stroke="#57534E"
-                        strokeWidth="1.5"
-                      />
-                      <text
-                        x={fx - 25}
-                        y="162"
-                        textAnchor="middle"
-                        className="text-[10.5px] font-mono font-bold fill-[#A8A29E]"
-                      >
-                        {fretNum}
-                      </text>
-
-                      {/* Inlay Dots */}
-                      {isSingleMarker && (
-                        <circle cx={fx - 25} cy="85" r="4" fill="#A8A29E" opacity="0.4" />
-                      )}
-                      {isDoubleMarker && (
-                        <>
-                          <circle cx={fx - 25} cy="60" r="4" fill="#A8A29E" opacity="0.4" />
-                          <circle cx={fx - 25} cy="110" r="4" fill="#A8A29E" opacity="0.4" />
-                        </>
-                      )}
-                    </g>
-                  );
-                })}
-
-                {/* Active Note Badges */}
-                {fullPositions.map((pos) => {
-                  const sy = 25 + (pos.stringNum - 1) * 24;
-                  const fx = pos.fret === 0 ? 20 : 40 + pos.fret * 50 - 25;
-                  const isPlaying = activeNoteKey === `${pos.stringNum}-${pos.fret}`;
-                  const label = displayLabelMode === 'note' ? pos.note : pos.degree;
-
-                  const fill = isPlaying
-                    ? '#D97706'
-                    : pos.role === 'root'
-                    ? '#FAF9F5'
-                    : pos.role === 'characteristic'
-                    ? '#D97706'
-                    : '#44403C';
-
-                  const stroke = isPlaying
-                    ? '#D97706'
-                    : pos.role === 'root'
-                    ? '#FAF9F5'
-                    : pos.role === 'characteristic'
-                    ? '#D97706'
-                    : '#78716C';
-
-                  const textColor =
-                    pos.role === 'root'
-                      ? '#1C1917'
-                      : isPlaying || pos.role === 'characteristic'
-                      ? '#FAF9F5'
-                      : '#FAF9F5';
-
-                  return (
-                    <g
-                      key={`fn-note-${pos.stringNum}-${pos.fret}`}
-                      className="cursor-pointer active:scale-95 transition-transform"
-                      onClick={() => handlePlayNote(pos)}
-                    >
-                      <circle
-                        cx={fx}
-                        cy={sy}
-                        r={8.5}
-                        fill={fill}
-                        stroke={stroke}
-                        strokeWidth="1.6"
-                      />
-                      <text
-                        x={fx}
-                        y={sy + 3}
-                        textAnchor="middle"
-                        className="text-[8px] font-mono font-black pointer-events-none"
-                        fill={textColor}
-                      >
-                        {label}
-                      </text>
-                    </g>
-                  );
-                })}
-              </svg>
+            {/* Title Badge */}
+            <div className="rotate-90 whitespace-nowrap px-3 py-1.5 bg-[#FAF9F5] text-[#1C1917] rounded-xl font-mono font-black text-xs shadow-xs shrink-0">
+              {rootNote} {selectedScale.name}
             </div>
           </div>
         </div>
@@ -608,3 +629,4 @@ export const ScaleFretboardDiagram: React.FC<ScaleFretboardDiagramProps> = ({
     </>
   );
 };
+
