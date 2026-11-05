@@ -11,31 +11,6 @@ export interface ScaleType {
 export const SCALE_TYPES: ScaleType[] = [
   // Populer
   {
-    id: 'pentatonic-minor',
-    name: 'Pentatonik Minor',
-    category: 'popular',
-    intervals: [0, 3, 5, 7, 10],
-    formulaNames: '1 - b3 - 4 - 5 - b7',
-    description: 'Skala paling populer untuk solo gitar rock, pop, blues & indie.',
-  },
-  {
-    id: 'pentatonic-major',
-    name: 'Pentatonik Mayor',
-    category: 'popular',
-    intervals: [0, 2, 4, 7, 9],
-    formulaNames: '1 - 2 - 3 - 5 - 6',
-    description: 'Nada manis dan lapang, khas musik akustik, country, & pop manis.',
-  },
-  {
-    id: 'blues',
-    name: 'Blues Scale',
-    category: 'popular',
-    intervals: [0, 3, 5, 6, 7, 10],
-    formulaNames: '1 - b3 - 4 - b5 - 5 - b7',
-    description: 'Pentatonik Minor dengan sentuhan Blue Note (b5) yang gahar dan emosional.',
-    characteristicSemitones: [6], // b5 Blue note
-  },
-  {
     id: 'diatonic-major',
     name: 'Mayor (Ionian)',
     category: 'popular',
@@ -47,9 +22,34 @@ export const SCALE_TYPES: ScaleType[] = [
     id: 'diatonic-minor',
     name: 'Minor (Aeolian)',
     category: 'popular',
-    intervals: [0, 3, 5, 7, 8, 10],
+    intervals: [0, 2, 3, 5, 7, 8, 10],
     formulaNames: '1 - 2 - b3 - 4 - 5 - b6 - b7',
     description: 'Skala minor alami 7 nada, syahdu, sedih, dan melankolis.',
+  },
+  {
+    id: 'pentatonic-major',
+    name: 'Pentatonik Mayor',
+    category: 'popular',
+    intervals: [0, 2, 4, 7, 9],
+    formulaNames: '1 - 2 - 3 - 5 - 6',
+    description: 'Nada manis dan lapang, khas musik akustik, country, & pop manis.',
+  },
+  {
+    id: 'pentatonic-minor',
+    name: 'Pentatonik Minor',
+    category: 'popular',
+    intervals: [0, 3, 5, 7, 10],
+    formulaNames: '1 - b3 - 4 - 5 - b7',
+    description: 'Skala paling populer untuk solo gitar rock, pop, blues & indie.',
+  },
+  {
+    id: 'blues',
+    name: 'Blues Scale',
+    category: 'popular',
+    intervals: [0, 3, 5, 6, 7, 10],
+    formulaNames: '1 - b3 - 4 - b5 - 5 - b7',
+    description: 'Pentatonik Minor dengan sentuhan Blue Note (b5) yang gahar dan emosional.',
+    characteristicSemitones: [6], // b5 Blue note
   },
 
   // Modus Modal

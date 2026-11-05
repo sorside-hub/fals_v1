@@ -11,7 +11,7 @@ interface ScaleViewProps {
 
 export const ScaleView: React.FC<ScaleViewProps> = ({ onOpenSidebar }) => {
   const [rootNote, setRootNote] = useState<string>('C');
-  const [selectedScaleId, setSelectedScaleId] = useState<string>('pentatonic-minor');
+  const [selectedScaleId, setSelectedScaleId] = useState<string>('diatonic-major');
   const [isRootPickerOpen, setIsRootPickerOpen] = useState(false);
 
   // Find active scale definition
