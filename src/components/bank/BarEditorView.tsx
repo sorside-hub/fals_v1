@@ -264,7 +264,7 @@ export const BarEditorView: React.FC<BarEditorViewProps> = ({
       </div>
 
       {/* 2. Editor Canvas */}
-      <div className="relative flex flex-col w-full bg-[#FAF9F5] paper-pattern rounded-2xl border border-[#E5E4DE] overflow-hidden shadow-2xs">
+      <div className="relative flex flex-col w-full bg-[#FAF9F5] rounded-2xl border border-[#E5E4DE] overflow-hidden shadow-2xs">
         {/* CASE A: Category is 'bar' or 'hook' -> Match lyric editor (gutter line numbers + live syllable count, NO makna) */}
         {isBarOrHook ? (
           <div className="flex w-full min-h-[300px] sm:min-h-[360px]">

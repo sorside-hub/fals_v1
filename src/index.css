@@ -17,11 +17,9 @@
   }
 }
 
-/* Paper texture dot grid */
+/* Clean paper background */
 .paper-pattern {
   background-color: #FAF9F5;
-  background-image: radial-gradient(#E2DFD7 0.75px, transparent 0.75px);
-  background-size: 20px 20px;
 }
 
 /* Songwriter line spacing */

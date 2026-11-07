@@ -6,6 +6,7 @@ export interface ParsedRoute {
   tab: TabType;
   subView?: 'editor' | 'deep' | 'concept' | 'album' | 'settings' | null;
   id?: string | null;
+  action?: 'new-single' | 'new-bar' | null;
 }
 
 export function parseHash(hashStr: string): ParsedRoute {
@@ -15,10 +16,28 @@ export function parseHash(hashStr: string): ParsedRoute {
   }
 
   if (!clean) {
-    return { rawHash: '#lyrics', tab: 'lyrics', subView: null, id: null };
+    return { rawHash: '#lyrics', tab: 'lyrics', subView: null, id: null, action: null };
   }
 
-  const parts = clean.split('/');
+  let action: 'new-single' | 'new-bar' | null = null;
+  let cleanNoQuery = clean;
+  if (clean.includes('?')) {
+    const [pathPart, queryPart] = clean.split('?');
+    cleanNoQuery = pathPart;
+    if (queryPart.includes('action=new-single') || queryPart.includes('new-single')) {
+      action = 'new-single';
+    } else if (queryPart.includes('action=new-bar') || queryPart.includes('new-bar')) {
+      action = 'new-bar';
+    }
+  }
+
+  if (cleanNoQuery === 'lyrics/new-single' || cleanNoQuery === 'new-single') {
+    action = 'new-single';
+  } else if (cleanNoQuery === 'bank/new-bar' || cleanNoQuery === 'new-bar') {
+    action = 'new-bar';
+  }
+
+  const parts = cleanNoQuery.split('/');
   const rawTab = parts[0]?.toLowerCase();
 
   if (rawTab === 'settings') {
@@ -27,6 +46,7 @@ export function parseHash(hashStr: string): ParsedRoute {
       tab: 'lyrics',
       subView: 'settings',
       id: null,
+      action: null,
     };
   }
 
@@ -49,6 +69,7 @@ export function parseHash(hashStr: string): ParsedRoute {
     tab,
     subView,
     id,
+    action,
   };
 }
 

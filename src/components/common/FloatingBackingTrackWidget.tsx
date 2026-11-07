@@ -1,27 +1,57 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Square, SlidersHorizontal, X, Volume2, Music2, Sparkles, ChevronUp, ChevronDown } from 'lucide-react';
 import { backingTrack, BACKING_TRACK_GENRES, BackingTrackGenre } from '../../utils/backingTrackEngine';
+import { useVirtualKeyboard } from '../../hooks/useVirtualKeyboard';
 
 export const FloatingBackingTrackWidget: React.FC = () => {
   const [state, setState] = useState(backingTrack.getState());
   const [isSetupOpen, setIsSetupOpen] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(true);
+  const { isKeyboardVisible } = useVirtualKeyboard();
+  const [lastActivity, setLastActivity] = useState(Date.now());
+
+  const resetInactivityTimer = () => {
+    setLastActivity(Date.now());
+  };
 
   useEffect(() => {
     const unsubscribe = backingTrack.subscribe(() => {
       setState(backingTrack.getState());
+      setLastActivity(Date.now());
     });
     return unsubscribe;
   }, []);
+
+  // Auto-collapse widget after 4 seconds of inactivity when expanded
+  useEffect(() => {
+    if (isMinimized || isSetupOpen) return;
+
+    const timer = setTimeout(() => {
+      setIsMinimized(true);
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [isMinimized, isSetupOpen, lastActivity, state.isPlaying, state.bpm, state.genre, state.volume]);
 
   const activeGenreObj = BACKING_TRACK_GENRES.find((g) => g.id === state.genre) || BACKING_TRACK_GENRES[0];
 
   return (
     <>
-      {/* FLOATING MINI PLAYER WIDGET (DOCK AT BOTTOM RIGHT ABOVE NAV BAR) */}
-      <div className="fixed bottom-18 right-3 sm:right-6 z-40 select-none animate-fade-in flex flex-col items-end gap-1.5">
+      {/* FLOATING MINI PLAYER WIDGET (DOCK AT BOTTOM RIGHT ABOVE NAV BAR, SUBMERGED UNDER KEYBOARD ON MOBILE) */}
+      <div
+        className={`fixed bottom-18 right-3 sm:right-6 z-40 select-none flex flex-col items-end gap-1.5 transition-all duration-150 ${
+          isKeyboardVisible
+            ? 'max-md:opacity-0 max-md:pointer-events-none max-md:invisible max-md:translate-y-3'
+            : 'opacity-100 translate-y-0'
+        }`}
+      >
         {!isMinimized ? (
-          <div className="bg-[#1C1917]/95 text-[#FAF9F5] border border-[#383533] backdrop-blur-md rounded-2xl p-1.5 sm:p-2 shadow-2xl flex items-center gap-2 max-w-[calc(100vw-24px)] transition-all">
+          <div
+            onPointerDown={resetInactivityTimer}
+            onTouchStart={resetInactivityTimer}
+            onMouseMove={resetInactivityTimer}
+            className="bg-[#1C1917]/95 text-[#FAF9F5] border border-[#383533] backdrop-blur-md rounded-2xl p-1.5 sm:p-2 shadow-2xl flex items-center gap-2 max-w-[calc(100vw-24px)] transition-all"
+          >
             {/* Genre Badge & Setup Trigger */}
             <button
               type="button"
@@ -90,7 +120,7 @@ export const FloatingBackingTrackWidget: React.FC = () => {
             }`}
           >
             <Music2 className="w-3.5 h-3.5" />
-            <span>Drum Jam {state.isPlaying ? '● ON' : ''}</span>
+            <span>Beat Track</span>
             <ChevronUp className="w-3 h-3 ml-0.5" />
           </button>
         )}

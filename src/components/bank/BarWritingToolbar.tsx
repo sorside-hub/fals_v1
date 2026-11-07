@@ -52,8 +52,9 @@ export const BarWritingToolbar: React.FC<BarWritingToolbarProps> = ({
     <div
       style={{
         bottom: `${effectiveOffset}px`,
+        transform: 'translateZ(0)',
       }}
-      className="fixed inset-x-0 bottom-0 z-50 bg-[#FAF9F5]/98 backdrop-blur-md border-t border-b border-[#E5E4DE] shadow-xl px-2 py-1.5 flex items-center gap-1.5 animate-fade-in"
+      className="fixed inset-x-0 bottom-0 z-50 bg-[#FAF9F5]/98 backdrop-blur-md border-t border-b border-[#E5E4DE] shadow-xl px-2 py-1.5 flex items-center gap-1.5 will-change-transform"
     >
       <div className="flex-1 flex items-center gap-1 overflow-x-auto scrollbar-none py-0.5">
         <span className="text-[10px] font-mono text-[#78716C] uppercase shrink-0 mr-1">Rima:</span>

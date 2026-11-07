@@ -42,6 +42,47 @@ export default defineConfig(() => {
               purpose: 'maskable',
             },
           ],
+          shortcuts: [
+            {
+              name: '+ Lirik',
+              short_name: '+ Lirik',
+              description: 'Tulis lagu single baru',
+              url: '/#lyrics?action=new-single',
+              icons: [
+                {
+                  src: '/pwa-192x192.png',
+                  sizes: '192x192',
+                  type: 'image/png',
+                },
+              ],
+            },
+            {
+              name: '+ Amunisi',
+              short_name: '+ Amunisi',
+              description: 'Catat bar atau rima amunisi baru',
+              url: '/#bank?action=new-bar',
+              icons: [
+                {
+                  src: '/pwa-192x192.png',
+                  sizes: '192x192',
+                  type: 'image/png',
+                },
+              ],
+            },
+            {
+              name: 'Open Lab',
+              short_name: 'Open Lab',
+              description: 'Buka Studio Drum & Alat Musik Lab',
+              url: '/#lab',
+              icons: [
+                {
+                  src: '/pwa-192x192.png',
+                  sizes: '192x192',
+                  type: 'image/png',
+                },
+              ],
+            },
+          ],
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],

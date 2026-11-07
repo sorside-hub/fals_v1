@@ -41,14 +41,20 @@ export function useVirtualKeyboard(): VirtualKeyboardState {
 
       const vv = window.visualViewport;
       const currentHeight = window.innerHeight;
+
+      // Track maximum seen height as baseline full-screen height (keyboard closed)
+      if (currentHeight > initialHeightRef.current) {
+        initialHeightRef.current = currentHeight;
+      }
       const baseline = initialHeightRef.current;
 
-      // 2. Detect if keyboard is open:
-      // - In Android Chrome / resizing viewport: window.innerHeight shrinks significantly
-      // - In iOS Safari: window.innerHeight stays constant, but visualViewport.height shrinks
+      // 2. Detect if keyboard is physically open:
+      // The viewport MUST be significantly shrunk compared to baseline (> 100px).
+      // When the user dismisses the keyboard via Android back button or chevron,
+      // the viewport immediately expands back to baseline, causing isOpen to become FALSE instantly!
       const layoutShrunk = baseline > 0 && (baseline - currentHeight > 100);
-      const visualShrunk = vv ? (baseline > 0 && baseline - vv.height > 100) : false;
-      const isOpen = layoutShrunk || visualShrunk;
+      const visualShrunk = vv ? (baseline > 0 && (baseline - vv.height > 100)) : false;
+      const isOpen = Boolean(isInputActive && (layoutShrunk || visualShrunk));
 
       if (!isOpen) {
         setIsKeyboardVisible(false);
@@ -57,44 +63,49 @@ export function useVirtualKeyboard(): VirtualKeyboardState {
       }
 
       // 3. Calculate CSS offset needed for position: fixed elements:
-      // - In Android Chrome: window.innerHeight already shrank to the area above the keyboard.
-      //   Therefore, bottom: 0 is ALREADY flush against the keyboard! Offset must be 0!
-      // - In iOS Safari: window.innerHeight did not shrink, so fixed elements at bottom: 0
-      //   fall behind the keyboard. The offset needed is: window.innerHeight - (vv.height + vv.offsetTop).
+      // - If layout viewport shrank (e.g. Android Chrome with resizes-content):
+      //   window.innerHeight already resized cleanly to fit above the keyboard.
+      //   bottom: 0 is already docked perfectly on top of the virtual keyboard! offset is 0.
+      // - If layout viewport did not shrink but visualViewport shrank (e.g. iOS Safari):
+      //   The offset is strictly the keyboard height (baseline - vv.height).
+      //   We do NOT use vv.offsetTop so page scrolling never causes the toolbar to jump!
       let offset = 0;
-      if (vv) {
-        const diff = currentHeight - (vv.height + vv.offsetTop);
-        offset = Math.max(0, Math.round(diff));
+      if (layoutShrunk) {
+        offset = 0;
+      } else if (visualShrunk && vv) {
+        offset = Math.max(0, Math.round(baseline - vv.height));
       }
 
       setIsKeyboardVisible(true);
       setKeyboardOffset(offset);
     };
 
-    const handleResizeOrScroll = () => {
+    const handleResize = () => {
       checkKeyboard();
     };
 
     const handleFocusIn = () => {
+      // Run immediately synchronously on 0ms so React updates state before browser paints next frame
+      checkKeyboard();
       // Tick-based delay to allow the browser to animate the keyboard and resize the viewport
-      setTimeout(checkKeyboard, 80);
-      setTimeout(checkKeyboard, 250);
+      setTimeout(checkKeyboard, 50);
+      setTimeout(checkKeyboard, 200);
     };
 
     const handleFocusOut = () => {
-      setTimeout(checkKeyboard, 120);
+      setTimeout(checkKeyboard, 100);
     };
 
-    window.visualViewport?.addEventListener('resize', handleResizeOrScroll);
-    window.visualViewport?.addEventListener('scroll', handleResizeOrScroll);
-    window.addEventListener('resize', handleResizeOrScroll);
+    // Listen only to resize and focus events. NEVER listen to scroll events
+    // so page scrolling is completely smooth and does not cause jitter!
+    window.visualViewport?.addEventListener('resize', handleResize);
+    window.addEventListener('resize', handleResize);
     document.addEventListener('focusin', handleFocusIn);
     document.addEventListener('focusout', handleFocusOut);
 
     return () => {
-      window.visualViewport?.removeEventListener('resize', handleResizeOrScroll);
-      window.visualViewport?.removeEventListener('scroll', handleResizeOrScroll);
-      window.removeEventListener('resize', handleResizeOrScroll);
+      window.visualViewport?.removeEventListener('resize', handleResize);
+      window.removeEventListener('resize', handleResize);
       document.removeEventListener('focusin', handleFocusIn);
       document.removeEventListener('focusout', handleFocusOut);
     };

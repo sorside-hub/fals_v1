@@ -88,6 +88,34 @@ export default function App() {
     }
   }, [route, findSong, currentSongId, selectSong]);
 
+  // Handle PWA Long-Press App Shortcuts (+ Lirik Single, + Amunisi)
+  useEffect(() => {
+    if (route.action === 'new-single') {
+      const created = createProject('single', 'Judul lagumu...');
+      if (created) {
+        selectSong(created);
+        setLastActiveSongId(created.id);
+        setLastLyricSubView('editor');
+        navigate(`#lyrics/editor/${created.id}`, false, true);
+      }
+    } else if (route.action === 'new-bar') {
+      const created = addBar({
+        text: '',
+        meaning: '',
+        category: 'diksi',
+        rhymeScheme: 'Free',
+        syllableCount: 0,
+        tags: [],
+        createdAt: Date.now(),
+      });
+      if (created) {
+        setLastActiveBarId(created.id);
+        setLastBankSubView('editor');
+        navigate(`#bank/editor/${created.id}`, false, true);
+      }
+    }
+  }, [route.action, createProject, selectSong, navigate, addBar]);
+
   // Tab switching via hash router
   const handleSelectTab = (tab: TabType) => {
     if (tab === 'lyrics') {

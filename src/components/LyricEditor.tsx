@@ -86,13 +86,14 @@ function convertPastedSectionsToHtml(rawText: string): string {
 
   for (const line of lines) {
     const trimmed = line.trim();
-    const sectionMatch = trimmed.match(/^\[(verse|chorus|bridge|pre-chorus|post-chorus|hook|outro|intro|interlude|solo|refrain|tag)(?:\s*(\d+))?\]$/i);
+    const sectionMatch = trimmed.match(/^\[(verse|chorus|bridge|pre-chorus|post-chorus|hook|outro|intro|interlude|solo|refrain|tag|final-chorus)(?:\s*(\d+))?\]$/i);
     if (sectionMatch) {
       const typeMap: Record<string, string> = {
         verse: 'Verse',
         chorus: 'Chorus',
         'pre-chorus': 'Pre-Chorus',
         'post-chorus': 'Post-Chorus',
+        'final-chorus': 'Final-Chorus',
         bridge: 'Bridge',
         hook: 'Hook',
         intro: 'Intro',
@@ -194,9 +195,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
       ChordBadgeNode,
       SectionExtension,
     ],
-    content: formatChordsForEditor(
-      currentSong.content || '<p>[Verse 1]</p><p>Di sini ku menulis nada yang tertinggal</p><p>Mencari kata yang tak lagi menyangkal</p><p></p><p>[Chorus]</p><p>FALS mengalun di dada yang sunyi</p><p>Harmoni tercipta tanpa batas lagi</p>'
-    ),
+    content: formatChordsForEditor(currentSong.content ?? ''),
     editorProps: {
       attributes: {
         class: 'tiptap-editor focus:outline-hidden min-h-[400px] text-[14px] sm:text-[15.5px] text-[#1C1917] leading-[1.55rem] font-normal px-1 sm:px-2',
@@ -217,7 +216,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
 
           // Check if pasted content contains section tags or multiline lyric text
           if (
-            /\[(verse|chorus|bridge|pre-chorus|post-chorus|hook|outro|intro|interlude|solo|refrain|tag)/i.test(cleanText) ||
+            /\[(verse|chorus|bridge|pre-chorus|post-chorus|final-chorus|hook|outro|intro|interlude|solo|refrain|tag)/i.test(cleanText) ||
             cleanText.includes('\n')
           ) {
             event.preventDefault();
@@ -305,12 +304,12 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
         },
       },
       handleClick: (_view, _pos, event) => {
-        if (Date.now() - lastDragTimeRef.current < 300) {
-          return true; // Ignore clicks resulting from a drag/scroll gesture
-        }
         const target = event.target as HTMLElement | null;
         const badge = target?.closest('.chord-badge, [data-chord]') as HTMLElement | null;
         if (badge) {
+          if (Date.now() - lastDragTimeRef.current < 300) {
+            return true; // Ignore clicks resulting from a drag/scroll gesture only for badges
+          }
           const chord = badge.getAttribute('data-chord') || badge.textContent?.replace(/[\[\]]/g, '').trim();
           if (chord) {
             if (document.activeElement instanceof HTMLElement) {
@@ -320,6 +319,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
             return true;
           }
         }
+        // Let ProseMirror handle all normal text clicks so the caret is placed accurately
         return false;
       },
     },
@@ -342,15 +342,33 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
     },
   });
 
-  // Sync TipTap editor content when active version changes
+  // Track last loaded song and version ID to prevent resetting the editor while user is typing
+  const lastLoadedRef = useRef<{ songId: string; versionId?: string }>({
+    songId: currentSong.id,
+    versionId: currentSong.activeVersionId,
+  });
+
+  // Sync TipTap editor content ONLY when switching songs or switching versions
+  // Never call setContent during active typing or parent re-renders within the same version
   useEffect(() => {
-    if (editor && currentSong.content !== undefined) {
-      const formatted = formatChordsForEditor(currentSong.content);
+    if (!editor) return;
+
+    const hasSongChanged = lastLoadedRef.current.songId !== currentSong.id;
+    const hasVersionChanged = lastLoadedRef.current.versionId !== currentSong.activeVersionId;
+
+    if (hasSongChanged || hasVersionChanged) {
+      lastLoadedRef.current = {
+        songId: currentSong.id,
+        versionId: currentSong.activeVersionId,
+      };
+
+      const raw = currentSong.content || '';
+      const formatted = formatChordsForEditor(raw);
       if (editor.getHTML() !== formatted) {
         editor.commands.setContent(formatted, { emitUpdate: false });
       }
     }
-  }, [currentSong.activeVersionId, currentSong.content, editor]);
+  }, [currentSong.id, currentSong.activeVersionId, currentSong.content, editor]);
 
   // Sync Key & BPM when active version or song changes
   useEffect(() => {
@@ -486,7 +504,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
     const text = editor.getText();
     const rawLines = text.split('\n');
     return rawLines.map((line, index) => {
-      const isSectionTag = /^\s*\[(verse|chorus|bridge|pre-chorus|hook|outro|intro|interlude|solo)/i.test(line);
+      const isSectionTag = /^\s*\[(verse|chorus|bridge|pre-chorus|final-chorus|hook|outro|intro|interlude|solo)/i.test(line);
       const syllables = isSectionTag ? 0 : countSyllablesInLine(line);
       return {
         id: index,
@@ -519,7 +537,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
         const cleanLyricText = clone.innerText || clone.textContent || '';
 
         const rawText = child.innerText || child.textContent || '';
-        const isSectionTag = /^\s*\[(verse|chorus|bridge|pre-chorus|hook|outro|intro|interlude|solo)/i.test(rawText);
+        const isSectionTag = /^\s*\[(verse|chorus|bridge|pre-chorus|final-chorus|hook|outro|intro|interlude|solo)/i.test(rawText);
         const syllables = isSectionTag ? 0 : countSyllablesInLine(cleanLyricText);
 
         const childRect = child.getBoundingClientRect();
@@ -582,30 +600,37 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
   const handleInsertSection = (sectionName: string) => {
     if (!editor) return;
 
-    const { selection } = editor.state;
-    const currentLineText = editor.state.doc.textBetween(
-      selection.$anchor.start(),
-      selection.$anchor.end()
-    ).trim();
+    try {
+      const { selection } = editor.state;
+      const parent = selection.$from?.parent;
+      const isCurrentLineEmpty = !parent || !parent.textContent.trim();
 
-    if (!currentLineText) {
+      if (isCurrentLineEmpty) {
+        editor
+          .chain()
+          .focus()
+          .setHeading({ level: 3 })
+          .insertContent(`[${sectionName}]`)
+          .splitBlock()
+          .setParagraph()
+          .run();
+      } else {
+        editor
+          .chain()
+          .focus()
+          .splitBlock()
+          .setHeading({ level: 3 })
+          .insertContent(`[${sectionName}]`)
+          .splitBlock()
+          .setParagraph()
+          .run();
+      }
+    } catch {
+      // Fallback: insert heading and paragraph at the current cursor position
       editor
         .chain()
         .focus()
-        .setNode('heading', { level: 3 })
-        .insertContent(`[${sectionName}]`)
-        .splitBlock()
-        .setNode('paragraph')
-        .run();
-    } else {
-      editor
-        .chain()
-        .focus()
-        .splitBlock()
-        .setNode('heading', { level: 3 })
-        .insertContent(`[${sectionName}]`)
-        .splitBlock()
-        .setNode('paragraph')
+        .insertContent(`<h3>[${sectionName}]</h3><p></p>`)
         .run();
     }
   };
@@ -640,14 +665,14 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
     }
   };
 
-  // Fallback click listener on editor container for chord badges
+  // Fallback click listener on editor container for chord badges and focusing bottom of canvas
   const handleEditorContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (Date.now() - lastDragTimeRef.current < 300) {
-      return;
-    }
     const target = e.target as HTMLElement | null;
     const badge = target?.closest('.chord-badge, [data-chord]') as HTMLElement | null;
     if (badge) {
+      if (Date.now() - lastDragTimeRef.current < 300) {
+        return;
+      }
       const chord = badge.getAttribute('data-chord') || badge.textContent?.replace(/[\[\]]/g, '').trim();
       if (chord) {
         if (document.activeElement instanceof HTMLElement) {
@@ -655,6 +680,12 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
         }
         setSelectedChordForInspection(chord);
       }
+      return;
+    }
+
+    // If clicking on empty canvas area below text, place cursor at the end of the text
+    if (editor && (e.target === e.currentTarget || (e.target as HTMLElement)?.classList?.contains('paper-pattern'))) {
+      editor.commands.focus('end');
     }
   };
 
@@ -921,7 +952,7 @@ export const LyricEditor: React.FC<LyricEditorProps> = ({
 
       {/* 3. Main Full-Screen Writing Canvas */}
       <div
-        className="relative flex flex-1 w-full min-h-[550px] bg-[#FAF9F5] paper-pattern pt-2 pb-16"
+        className="relative flex flex-1 w-full min-h-[550px] bg-[#FAF9F5] pt-2 pb-16"
         onClick={handleEditorContainerClick}
       >
         {/* Left Gutter: Live Syllable Count Only - Flush to left edge ("mentok kiri") */}

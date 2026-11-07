@@ -16,12 +16,12 @@ const DEFAULT_EMPTY_SONG: SongDraft = {
   timeSignature: '4/4',
   status: 'draft',
   updatedAt: Date.now(),
-  content: '<h3>[Verse 1]</h3><p></p><h3>[Chorus]</h3><p></p>',
+  content: '',
   versions: [
     {
       id: 'v-1',
       name: 'Versi 1',
-      content: '<h3>[Verse 1]</h3><p></p><h3>[Chorus]</h3><p></p>',
+      content: '',
       key: 'C',
       bpm: 95,
       isFinal: true,
@@ -385,7 +385,7 @@ export function useSongs() {
     const initialKey = options?.key || 'C';
 
     if (type === 'single') {
-      const initialContent = `<h3>[Verse 1]</h3><p></p><h3>[Chorus]</h3><p></p>`;
+      const initialContent = '';
       const defaultVersion: LyricVersion = {
         id: `v-${timestamp}`,
         name: 'Versi 1',
@@ -429,12 +429,12 @@ export function useSongs() {
         timeSignature: '4/4',
         status: 'draft',
         updatedAt: timestamp,
-        content: `<h3>[Verse 1]</h3><p></p><h3>[Chorus]</h3><p></p>`,
+        content: '',
         versions: [
           {
             id: trackVerId,
             name: 'Versi 1',
-            content: `<h3>[Verse 1]</h3><p></p><h3>[Chorus]</h3><p></p>`,
+            content: '',
             key: 'C',
             bpm: 95,
             isFinal: true,
@@ -524,12 +524,12 @@ export function useSongs() {
         timeSignature: '4/4',
         status: 'draft',
         updatedAt: timestamp,
-        content: `<h3>[Verse 1]</h3><p></p><h3>[Chorus]</h3><p></p>`,
+        content: '',
         versions: [
           {
             id: verId,
             name: 'Versi 1',
-            content: `<h3>[Verse 1]</h3><p></p><h3>[Chorus]</h3><p></p>`,
+            content: '',
             key: 'C',
             bpm: 95,
             isFinal: true,
@@ -673,7 +673,7 @@ export function useSongs() {
       const newVersion: LyricVersion = {
         id: `v-${timestamp}`,
         name: `Versi ${versionCount}`,
-        content: duplicateFromActive && activeVer ? activeVer.content : `<h3>[Verse 1]</h3><p></p>`,
+        content: duplicateFromActive && activeVer ? activeVer.content : '',
         key: newKey,
         bpm: newBpm,
         isFinal: false,

@@ -208,22 +208,22 @@ export const CustomDrumBuilderView: React.FC = () => {
           </div>
         </div>
 
-        {/* Unified Master Horizontal Scroll Container */}
+        {/* Unified Responsive Container */}
         <div className="w-full overflow-x-auto pb-3 [scrollbar-width:thin]">
-          <div className="min-w-[820px] space-y-2">
+          <div className="w-full space-y-2 min-w-[560px]">
             {state.channels.map((ch) => {
               const currentPreset = SOUND_PRESETS.find((p) => p.id === ch.soundId) || SOUND_PRESETS[0];
 
               return (
-                <div key={ch.id} className="flex items-center gap-2 bg-[#FAF9F5] p-2.5 rounded-xl border border-[#E5E4DE] shadow-2xs">
+                <div key={ch.id} className="flex items-center gap-1.5 sm:gap-2 bg-[#FAF9F5] p-2 sm:p-2.5 rounded-xl border border-[#E5E4DE] shadow-2xs">
                   {/* Channel Controls (Left Sidebar) */}
-                  <div className="w-56 flex flex-col gap-1.5 shrink-0 pr-2 border-r border-[#E5E4DE]">
+                  <div className="w-44 sm:w-52 flex flex-col gap-1.5 shrink-0 pr-1.5 sm:pr-2 border-r border-[#E5E4DE]">
                     <div className="flex items-center justify-between">
                       <input
                         type="text"
                         value={ch.name}
                         onChange={(e) => bandlabEngine.updateChannel(ch.id, { name: e.target.value })}
-                        className="font-mono font-bold text-xs text-[#1C1917] bg-transparent border-b border-transparent hover:border-[#D6D3D1] focus:border-[#1C1917] focus:outline-none truncate w-32"
+                        className="font-mono font-bold text-xs text-[#1C1917] bg-transparent border-b border-transparent hover:border-[#D6D3D1] focus:border-[#1C1917] focus:outline-none truncate w-28 sm:w-32"
                       />
                       <div className="flex items-center justify-end">
                         {/* Delete */}
@@ -239,7 +239,7 @@ export const CustomDrumBuilderView: React.FC = () => {
                     </div>
 
                     {/* Custom Sound Selector Trigger */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
                       <button
                         type="button"
                         onClick={() => setActiveSoundPickerChannelId(ch.id)}
@@ -256,14 +256,14 @@ export const CustomDrumBuilderView: React.FC = () => {
                         step="0.05"
                         value={ch.volume}
                         onChange={(e) => bandlabEngine.updateChannel(ch.id, { volume: parseFloat(e.target.value) })}
-                        className="w-14 accent-[#1C1917] cursor-pointer"
+                        className="w-12 sm:w-14 accent-[#1C1917] cursor-pointer"
                         title={`Volume: ${Math.round(ch.volume * 100)}%`}
                       />
                     </div>
                   </div>
 
-                  {/* Step Sequencer Grid (Synchronized Widths) */}
-                  <div className="flex items-center gap-1 flex-1">
+                  {/* Step Sequencer Grid (Flexible Auto-Fitting Flex Items) */}
+                  <div className="flex items-center gap-0.5 sm:gap-1 flex-1">
                     {ch.steps.map((isActive, sIdx) => {
                       const isCurrentPlayingStep = state.isPlaying && activeStep === sIdx;
                       const isBarBoundary = sIdx % 4 === 0;
@@ -273,8 +273,8 @@ export const CustomDrumBuilderView: React.FC = () => {
                           key={sIdx}
                           type="button"
                           onClick={() => bandlabEngine.toggleStep(ch.id, sIdx)}
-                          className={`w-7 h-7 rounded-md transition-all cursor-pointer border shrink-0 ${
-                            isBarBoundary ? 'ml-1' : ''
+                          className={`flex-1 h-7 sm:h-8 rounded-md transition-all cursor-pointer border shrink-0 min-w-[14px] sm:min-w-[18px] ${
+                            isBarBoundary ? 'ml-0.5 sm:ml-1' : ''
                           } ${
                             isActive
                               ? isCurrentPlayingStep

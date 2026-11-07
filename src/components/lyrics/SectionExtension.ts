@@ -16,7 +16,7 @@ export const SectionExtension = Extension.create({
     return [
       new InputRule({
         // Matches bracketed section tags right when the user types the closing ']'
-        find: /(?:^|\s)\[(verse|chorus|bridge|pre-chorus|hook|outro|intro|interlude|solo)(?:\s*(\d+))?\]$/i,
+        find: /(?:^|\s)\[(verse|chorus|bridge|pre-chorus|final-chorus|hook|outro|intro|interlude|solo)(?:\s*(\d+))?\]$/i,
         handler: ({ state, range, match }) => {
           const rawType = match[1].toLowerCase();
           const num = match[2] ? ` ${match[2]}` : '';
@@ -25,6 +25,7 @@ export const SectionExtension = Extension.create({
             verse: 'Verse',
             chorus: 'Chorus',
             'pre-chorus': 'Pre-Chorus',
+            'final-chorus': 'Final-Chorus',
             bridge: 'Bridge',
             hook: 'Hook',
             intro: 'Intro',

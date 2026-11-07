@@ -20,6 +20,7 @@ export function getSectionOptions(text: string = ''): SectionOption[] {
     { key: 'verse', name: 'Verse', numbered: true },
     { key: 'pre-chorus', name: 'Pre-Chorus', numbered: false },
     { key: 'chorus', name: 'Chorus', numbered: true },
+    { key: 'final-chorus', name: 'Final-Chorus', numbered: false },
     { key: 'interlude', name: 'Interlude', numbered: false },
     { key: 'solo', name: 'Solo', numbered: false },
     { key: 'bridge', name: 'Bridge', numbered: false },
@@ -121,42 +122,14 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
     return getSectionOptions(editorText);
   }, [editorText]);
 
-  // Pointer/touch tracking to distinguish scrolling vs tapping
-  const pointerStartPos = useRef<{ x: number; y: number } | null>(null);
-  const isDraggingRef = useRef(false);
-
-  const handleItemPointerDown = (e: React.PointerEvent) => {
-    // Only preventDefault on mouse so desktop click doesn't steal focus,
-    // while allowing native touch scrolling gestures on mobile touch devices
-    if (e.pointerType === 'mouse') {
-      e.preventDefault();
-    }
-    pointerStartPos.current = { x: e.clientX, y: e.clientY };
-    isDraggingRef.current = false;
-  };
-
-  const handleItemPointerMove = (e: React.PointerEvent) => {
-    if (pointerStartPos.current) {
-      const dx = Math.abs(e.clientX - pointerStartPos.current.x);
-      const dy = Math.abs(e.clientY - pointerStartPos.current.y);
-      if (dx > 8 || dy > 8) {
-        isDraggingRef.current = true;
-      }
-    }
-  };
-
-  const handleItemPointerUp = (label: string) => {
-    if (!isDraggingRef.current) {
-      onInsertSection(label);
+  // Handler to safely insert section and close dropdown without losing editor focus
+  const handleSelectSection = (label: string, isMobile: boolean) => {
+    onInsertSection(label);
+    if (isMobile) {
       setShowSectionDropdownMobile(false);
+    } else {
+      setShowSectionDropdownDesktop(false);
     }
-    pointerStartPos.current = null;
-    isDraggingRef.current = false;
-  };
-
-  const handleItemPointerCancel = () => {
-    pointerStartPos.current = null;
-    isDraggingRef.current = false;
   };
 
   // Automatically close mobile section dropdown whenever the virtual keyboard closes
@@ -281,8 +254,13 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
                       type="button"
                       onPointerDown={(e) => {
                         e.preventDefault();
-                        onInsertSection(opt.label);
-                        setShowSectionDropdownDesktop(false);
+                        e.stopPropagation();
+                        handleSelectSection(opt.label, false);
+                      }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleSelectSection(opt.label, false);
                       }}
                       className="flex items-center justify-between w-full px-2 py-1.5 text-xs font-mono font-medium text-[#1C1917] hover:bg-[#F5F4EE] rounded-md transition cursor-pointer text-left"
                     >
@@ -343,8 +321,9 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
     <div
       style={{
         bottom: `${effectiveOffset}px`,
+        transform: 'translateZ(0)',
       }}
-      className="fixed inset-x-0 bottom-0 z-50 bg-[#FAF9F5]/98 backdrop-blur-md border-t border-b border-[#E5E4DE] shadow-xl px-2.5 py-1.5 flex items-center justify-between gap-1.5 animate-fade-in"
+      className="fixed inset-x-0 bottom-0 z-50 bg-[#FAF9F5]/98 backdrop-blur-md border-t border-b border-[#E5E4DE] shadow-xl px-2.5 py-1.5 flex items-center justify-between gap-1.5 will-change-transform"
     >
       <div className="flex items-center gap-1.5 min-w-0">
         {/* Pojok Kiri: Undo & Redo for Mobile */}
@@ -428,10 +407,16 @@ export const LyricWritingToolbar: React.FC<LyricWritingToolbarProps> = ({
                     key={opt.key}
                     type="button"
                     tabIndex={-1}
-                    onPointerDown={handleItemPointerDown}
-                    onPointerMove={handleItemPointerMove}
-                    onPointerUp={() => handleItemPointerUp(opt.label)}
-                    onPointerCancel={handleItemPointerCancel}
+                    onPointerDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleSelectSection(opt.label, true);
+                    }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleSelectSection(opt.label, true);
+                    }}
                     className="flex items-center justify-between px-2.5 py-2 text-xs font-mono font-medium text-[#1C1917] bg-[#FAF9F5] hover:bg-[#F0EFEA] active:bg-[#E7E5DC] border border-[#E5E4DE] rounded-lg transition text-left cursor-pointer select-none"
                   >
                     <span className="font-semibold truncate">+{opt.label}</span>
