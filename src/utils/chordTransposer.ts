@@ -60,7 +60,7 @@ export function transposeHtmlContent(htmlContent: string, semitoneShift: number)
   });
 
   // 2. Replace bracketed chords [Chord] in text
-  updated = updated.replace(/\[([A-G][b#]?(?:m|maj|min|dim|aug|sus[24]|add9|[0-9\/\#\b]*)?)\]/gi, (_match, chord) => {
+  updated = updated.replace(/\[([A-G][b#]?(?:[a-zA-Z0-9#\+\-\/\(\)]*))\]/gi, (_match, chord) => {
     const transposed = transposeChordSymbol(chord, semitoneShift);
     return `[${transposed}]`;
   });

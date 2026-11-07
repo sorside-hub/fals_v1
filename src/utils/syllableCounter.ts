@@ -26,7 +26,7 @@ export function countSyllablesInWord(word: string): number {
 }
 
 // Regular expression to match standard chord notations (e.g. C, Am, G7, F#m, Esus2, Eadd9, Bbmaj7, D/F#)
-export const CHORD_PATTERN = /^[A-G][b#]?(?:m|maj|min|dim|aug|sus[24]?|add[0-9]+|[0-9]+)*(?:\/[A-G][b#]?)?$/;
+export const CHORD_PATTERN = /^[A-G][b#]?(?:m|maj|min|dim|aug|sus|add|mmaj|[0-9\b\+\-\(\)])*(?:\/[A-G][b#]?)?$/i;
 
 export function isChordToken(token: string): boolean {
   const clean = token.trim().replace(/^[\(\[\{]/, '').replace(/[\)\]\}]$/, '');

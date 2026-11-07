@@ -160,3 +160,24 @@ export function parseChordSymbol(symbol: string): ParsedChord {
     formulaNames: formula.formulaNames || '1 - 3 - 5',
   };
 }
+
+const SECTION_KEYWORDS = /^(verse|chorus|bridge|intro|outro|pre-chorus|post-chorus|solo|hook|interlude|tag|refrain|ending|break|part|section|structure|drop|instrumental|coda|prechorus|postchorus|final-chorus|re-intro)/i;
+
+/**
+ * Checks whether a given string inside [brackets] is a genuine musical chord symbol
+ * and NOT a song section heading (e.g. [Chorus], [Bridge], [Verse 1]).
+ */
+export function isValidChordSymbol(symbol: string): boolean {
+  if (!symbol) return false;
+  const clean = symbol.trim().replace(/[\[\]]/g, '');
+  if (!clean) return false;
+
+  // 1. Blacklist section headings
+  if (SECTION_KEYWORDS.test(clean)) return false;
+
+  // 2. Strict chord pattern matching
+  const chordPattern = /^[A-G][b#]?(?:m|maj|min|dim|aug|sus[24]?|add[0-9]*|mmaj7|maj7|m7|min7|m9|maj9|dom[0-9]*|7sus4?|dim7|m7b5|halfdim|aug7|5|6|7|9|11|13|\+|\-)*(\/[A-G][b#]?)?$/i;
+
+  return chordPattern.test(clean);
+}
+

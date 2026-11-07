@@ -1,4 +1,5 @@
 import { Node, mergeAttributes, InputRule } from '@tiptap/core';
+import { isValidChordSymbol } from '../../utils/chordParser';
 
 export const ChordBadgeNode = Node.create({
   name: 'chordBadge',
@@ -48,10 +49,10 @@ export const ChordBadgeNode = Node.create({
   addInputRules() {
     return [
       new InputRule({
-        find: /\[([A-G][b#]?(?:m|maj|min|dim|aug|sus[24]|add9|[0-9])*)\]$/,
+        find: /\[([A-G][b#]?(?:[a-zA-Z0-9#\+\-\/\(\)]*))\]$/i,
         handler: ({ state, range, match }) => {
           const chord = match[1];
-          if (!chord) return;
+          if (!chord || !isValidChordSymbol(chord)) return;
           const { tr } = state;
           tr.replaceWith(range.from, range.to, this.type.create({ chord }));
         },

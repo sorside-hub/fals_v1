@@ -49,10 +49,13 @@ interface LyricEditorProps {
   onBack?: () => void;
 }
 
+import { parseChordSymbol, isValidChordSymbol } from '../utils/chordParser';
+
 // Helper to convert bracketed chords in plain strings into chord badge spans
 function formatChordsForEditor(rawContent: string): string {
   if (!rawContent) return '';
-  return rawContent.replace(/\[([A-G][b#]?(?:m|maj|min|dim|aug|sus[24]|add9|[0-9])*)\]/g, (_match, chord) => {
+  return rawContent.replace(/\[([A-G][b#]?(?:[a-zA-Z0-9#\+\-\/\(\)]*))\]/gi, (match, chord) => {
+    if (!isValidChordSymbol(chord)) return match;
     return `<span data-chord="${chord}">[${chord}]</span>`;
   });
 }

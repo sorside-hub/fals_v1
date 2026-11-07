@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ChordShapeVoicing } from '../../utils/guitarChordVoicings';
 import { GUITAR_STRINGS } from '../../data/constants';
 import { getGuitarFretNote } from '../../utils/musicTheory';
-import { Volume2, Play, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Volume2, Play, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { sound } from '../../utils/audioEngine';
 
 interface GuitarFretboardDiagramProps {
@@ -12,6 +12,7 @@ interface GuitarFretboardDiagramProps {
   notes: string[];
   shapes: ChordShapeVoicing[];
   onPlayFullChord?: () => void;
+  onClose?: () => void;
 }
 
 export const GuitarFretboardDiagram: React.FC<GuitarFretboardDiagramProps> = ({
@@ -21,6 +22,7 @@ export const GuitarFretboardDiagram: React.FC<GuitarFretboardDiagramProps> = ({
   notes,
   shapes,
   onPlayFullChord,
+  onClose,
 }) => {
   const [selectedShapeIndex, setSelectedShapeIndex] = useState(0);
   const [activeString, setActiveString] = useState<number | null>(null);
@@ -106,18 +108,31 @@ export const GuitarFretboardDiagram: React.FC<GuitarFretboardDiagramProps> = ({
     <div className="w-full bg-[#FFFFFF] border border-[#E5E4DE] rounded-2xl p-4 sm:p-5 shadow-2xs space-y-4">
       {/* Header: Chord Identity & Metadata */}
       <div className="space-y-2.5">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <span className="px-2.5 py-1 bg-[#1C1917] text-[#FAF9F5] rounded-xl font-mono font-black text-sm sm:text-base shadow-xs shrink-0">
-            {chordName}
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="text-xs sm:text-sm font-bold text-[#1C1917] truncate">
-              {displayName}
-            </div>
-            <div className="text-[10.5px] font-mono text-[#78716C] truncate">
-              {currentShape.name || `Bentuk ${selectedShapeIndex + 1}`}
+        <div className="flex items-center justify-between gap-2.5 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <span className="px-2.5 py-1 bg-[#1C1917] text-[#FAF9F5] rounded-xl font-mono font-black text-sm sm:text-base shadow-xs shrink-0">
+              {chordName}
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-xs sm:text-sm font-bold text-[#1C1917] truncate">
+                {displayName}
+              </div>
+              <div className="text-[10.5px] font-mono text-[#78716C] truncate">
+                {currentShape.name || `Bentuk ${selectedShapeIndex + 1}`}
+              </div>
             </div>
           </div>
+
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 rounded-xl bg-[#FAF9F5] hover:bg-[#F5F4EE] active:scale-95 border border-[#E5E4DE] text-[#1C1917] flex items-center justify-center transition cursor-pointer shadow-2xs shrink-0 ml-1"
+              title="Tutup (Esc)"
+            >
+              <X className="w-4 h-4 text-[#78716C]" />
+            </button>
+          )}
         </div>
 
         {/* Compact Metadata Row: Nada & Formula (Symmetrically Centered Vertically & Horizontally) */}
