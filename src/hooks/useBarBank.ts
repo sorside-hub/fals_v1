@@ -254,10 +254,29 @@ export function useBarBank() {
     deleteBarFromSupabase(id);
   };
 
+  const cleanupBar = (id?: string | null) => {
+    if (!id) return;
+    setBarItems(prev => {
+      const item = prev.find(b => b.id === id);
+      if (!item) return prev;
+
+      const isTextEmpty = !item.text || !item.text.trim();
+      const isMeaningEmpty = !item.meaning || !item.meaning.trim();
+      const isTagsEmpty = !item.tags || item.tags.length === 0;
+
+      if (isTextEmpty && isMeaningEmpty && isTagsEmpty) {
+        deleteBarFromSupabase(id);
+        return prev.filter(b => b.id !== id);
+      }
+      return prev;
+    });
+  };
+
   return {
     barItems,
     addBar,
     updateBar,
     deleteBar,
+    cleanupBar,
   };
 }

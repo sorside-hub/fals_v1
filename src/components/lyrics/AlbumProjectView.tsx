@@ -84,9 +84,7 @@ export const AlbumProjectView: React.FC<AlbumProjectViewProps> = ({
 
   // Add track at the bottom
   const handleQuickAddTrack = () => {
-    const nextNum = tracks.length + 1;
-    const formattedNum = String(nextNum).padStart(2, '0');
-    onAddTrack(project.id, `Track ${formattedNum}`);
+    onAddTrack(project.id, '');
   };
 
   const getStatusBadge = (status?: string) => {
@@ -310,7 +308,7 @@ export const AlbumProjectView: React.FC<AlbumProjectViewProps> = ({
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <h4 className="text-sm font-bold text-[#1C1917] truncate group-hover:text-black">
-                          {track.title}
+                          {track.title || 'Judul Lagu'}
                         </h4>
                         {getStatusBadge(track.status || 'draft')}
                       </div>

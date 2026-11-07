@@ -26,11 +26,11 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({
 
   const handleSelectType = (type: ProjectType) => {
     if (type === 'single') {
-      onCreateProject('single', 'Lagu Baru', { key: 'C', status: 'draft' });
+      onCreateProject('single', '', { key: 'C', status: 'draft' });
     } else if (type === 'ep') {
-      onCreateProject('ep', 'EP Baru', { trackCount: 4, status: 'draft' });
+      onCreateProject('ep', '', { trackCount: 0, status: 'draft' });
     } else if (type === 'album') {
-      onCreateProject('album', 'Album Baru', { trackCount: 8, status: 'draft' });
+      onCreateProject('album', '', { trackCount: 0, status: 'draft' });
     }
     onClose();
   };

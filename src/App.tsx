@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { TabType, SongDraft, ProjectType, SongStatus } from './types';
 import { BottomNav } from './components/BottomNav';
 import { LyricListView } from './components/lyrics/LyricListView';
@@ -45,6 +45,7 @@ export default function App() {
     addAudioMemo,
     renameAudioMemo,
     deleteAudioMemo,
+    cleanupSong,
   } = useSongs();
 
   const {
@@ -52,6 +53,7 @@ export default function App() {
     addBar,
     updateBar,
     deleteBar,
+    cleanupBar,
   } = useBarBank();
 
   // Modal and insertion states
@@ -60,6 +62,21 @@ export default function App() {
   const [lastLyricSubView, setLastLyricSubView] = useState<'list' | 'editor'>('list');
   const [lastActiveBarId, setLastActiveBarId] = useState<string | null>(null);
   const [lastBankSubView, setLastBankSubView] = useState<'list' | 'editor'>('list');
+
+  // Route transition auto-cleanup for empty drafts
+  const prevRouteRef = useRef(route);
+  useEffect(() => {
+    const prev = prevRouteRef.current;
+    if (prev.rawHash !== route.rawHash) {
+      if (prev.tab === 'lyrics' && prev.id && route.id !== prev.id) {
+        cleanupSong(prev.id);
+      }
+      if (prev.tab === 'bank' && prev.id && route.id !== prev.id) {
+        cleanupBar(prev.id);
+      }
+      prevRouteRef.current = route;
+    }
+  }, [route, cleanupSong, cleanupBar]);
 
   // Track active subView and sync current song/bar when navigating in tabs
   useEffect(() => {
@@ -91,7 +108,7 @@ export default function App() {
   // Handle PWA Long-Press App Shortcuts (+ Lirik Single, + Amunisi)
   useEffect(() => {
     if (route.action === 'new-single') {
-      const created = createProject('single', 'Judul lagumu...');
+      const created = createProject('single', '');
       if (created) {
         selectSong(created);
         setLastActiveSongId(created.id);

@@ -372,7 +372,7 @@ export function useSongs() {
 
   const createProject = (
     type: ProjectType,
-    title: string,
+    rawTitle: string,
     options?: {
       key?: string;
       concept?: string;
@@ -383,6 +383,8 @@ export function useSongs() {
     const timestamp = Date.now();
     const status = options?.status || 'draft';
     const initialKey = options?.key || 'C';
+
+    const title = (rawTitle === 'Judul lagumu...' || rawTitle === 'Lagu Baru' || rawTitle === 'EP Baru' || rawTitle === 'Album Baru') ? '' : (rawTitle || '');
 
     if (type === 'single') {
       const initialContent = '';
@@ -415,14 +417,14 @@ export function useSongs() {
       return newSong;
     }
 
-    const defaultTrackCount = options?.trackCount !== undefined ? options.trackCount : (type === 'ep' ? 4 : 8);
+    const defaultTrackCount = options?.trackCount !== undefined ? options.trackCount : 0;
     const generatedTracks: SongDraft[] = Array.from({ length: defaultTrackCount }).map((_, idx) => {
       const num = String(idx + 1).padStart(2, '0');
       const trackId = `track-${timestamp}-${idx + 1}`;
       const trackVerId = `v-track-${timestamp}-${idx + 1}`;
       return {
         id: trackId,
-        title: `Track ${num}`,
+        title: '',
         projectType: 'single',
         key: 'C',
         bpm: 95,
@@ -802,6 +804,76 @@ export function useSongs() {
     });
   };
 
+  const cleanupSong = (songId?: string | null) => {
+    if (!songId) return;
+    setSongs(prev => {
+      let idsToDelete: string[] = [];
+
+      const next = prev.map(song => {
+        if (song.id === songId) {
+          const cleanText = (song.content || '').replace(/<[^>]*>/g, ' ').replace(/\[[^\]]*\]/g, ' ').trim();
+          const hasContent = cleanText.length > 0;
+          const hasTitle = Boolean(song.title && song.title.trim());
+          const hasAudio = Boolean(song.audioMemos && song.audioMemos.length > 0);
+
+          if (song.projectType === 'single') {
+            if (!hasTitle && !hasContent && !hasAudio) {
+              idsToDelete.push(song.id);
+              return song;
+            }
+            if (!hasTitle && (hasContent || hasAudio)) {
+              return { ...song, title: 'Judul Lagu' };
+            }
+          } else if (song.projectType === 'ep' || song.projectType === 'album') {
+            const hasTracks = Boolean(song.tracks && song.tracks.length > 0);
+            const hasConcept = Boolean(song.concept && song.concept.trim());
+            if (!hasTitle && !hasTracks && !hasConcept) {
+              idsToDelete.push(song.id);
+              return song;
+            }
+            if (!hasTitle && (hasTracks || hasConcept)) {
+              return { ...song, title: song.projectType === 'ep' ? 'Judul EP' : 'Judul Album' };
+            }
+          }
+        }
+
+        if (song.tracks && song.tracks.some(t => t.id === songId)) {
+          const updatedTracks = song.tracks.map(t => {
+            if (t.id !== songId) return t;
+            const cleanText = (t.content || '').replace(/<[^>]*>/g, ' ').replace(/\[[^\]]*\]/g, ' ').trim();
+            const hasContent = cleanText.length > 0;
+            const hasTitle = Boolean(t.title && t.title.trim());
+            const hasAudio = Boolean(t.audioMemos && t.audioMemos.length > 0);
+
+            if (!hasTitle && !hasContent && !hasAudio) {
+              return null;
+            }
+            if (!hasTitle && (hasContent || hasAudio)) {
+              return { ...t, title: 'Judul Lagu' };
+            }
+            return t;
+          }).filter((t): t is SongDraft => t !== null);
+
+          return { ...song, tracks: updatedTracks, updatedAt: Date.now() };
+        }
+
+        return song;
+      });
+
+      if (idsToDelete.length > 0) {
+        idsToDelete.forEach(id => deleteSongFromSupabase(id));
+        return next.filter(s => !idsToDelete.includes(s.id));
+      }
+
+      const updatedTarget = next.find(s => s.id === songId) || next.flatMap(s => s.tracks || []).find(t => t.id === songId);
+      if (updatedTarget) {
+        persistSongToSupabase(updatedTarget);
+      }
+
+      return next;
+    });
+  };
+
   return {
     songs,
     currentSong,
@@ -814,6 +886,7 @@ export function useSongs() {
     createProject,
     createSong,
     deleteSong,
+    cleanupSong,
     selectSong,
     addTrackToProject,
     deleteTrackFromProject,
